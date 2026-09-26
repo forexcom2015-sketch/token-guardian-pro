@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
 function Inicio() {
   const { pctGeral, porModulo } = useProgresso();
   const radar = useRadar();
-  const proximo = modulos.find((m) => (porModulo.find((p) => p.id === m.id)?.pct ?? 0) < 100) ?? modulos[0];
+  const proximo = modulos.find((m) => (porModulo.find((p) => p.id === m.id)?.pct ?? 0) < 100) ?? modulos[0]!;
   return (
     <Shell status={<span className="font-mono text-muted-foreground">{pctGeral}% concluído</span>}>
       <div className="grid gap-8 lg:grid-cols-[320px_1fr]">

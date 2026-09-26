@@ -19,7 +19,7 @@ export function RadarLista({
 }: {
   casos: CasoRadar[];
   carregando: boolean;
-  erro?: string;
+  erro?: string | undefined;
   onGerar: () => void;
   compacto?: boolean;
 }) {
