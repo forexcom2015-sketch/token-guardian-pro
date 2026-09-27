@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HistoricoRouteImport } from './routes/historico'
+import { Route as LancamentosRouteImport } from './routes/lancamentos'
 import { Route as ModulosRouteImport } from './routes/modulos'
 import { Route as RadarRouteImport } from './routes/radar'
 import { Route as ModuloIdRouteImport } from './routes/modulo.$id'
@@ -17,6 +19,16 @@ import { Route as ModuloIdRouteImport } from './routes/modulo.$id'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoricoRoute = HistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LancamentosRoute = LancamentosRouteImport.update({
+  id: '/lancamentos',
+  path: '/lancamentos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ModulosRoute = ModulosRouteImport.update({
@@ -37,12 +49,16 @@ const ModuloIdRoute = ModuloIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/historico': typeof HistoricoRoute
+  '/lancamentos': typeof LancamentosRoute
   '/modulos': typeof ModulosRoute
   '/radar': typeof RadarRoute
   '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/historico': typeof HistoricoRoute
+  '/lancamentos': typeof LancamentosRoute
   '/modulos': typeof ModulosRoute
   '/radar': typeof RadarRoute
   '/modulo/$id': typeof ModuloIdRoute
@@ -50,20 +66,33 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/historico': typeof HistoricoRoute
+  '/lancamentos': typeof LancamentosRoute
   '/modulos': typeof ModulosRoute
   '/radar': typeof RadarRoute
   '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/modulos' | '/radar' | '/modulo/$id'
+  fullPaths:
+    '/' | '/historico' | '/lancamentos' | '/modulos' | '/radar' | '/modulo/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/modulos' | '/radar' | '/modulo/$id'
-  id: '__root__' | '/' | '/modulos' | '/radar' | '/modulo/$id'
+  to:
+    '/' | '/historico' | '/lancamentos' | '/modulos' | '/radar' | '/modulo/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/historico'
+    | '/lancamentos'
+    | '/modulos'
+    | '/radar'
+    | '/modulo/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HistoricoRoute: typeof HistoricoRoute
+  LancamentosRoute: typeof LancamentosRoute
   ModulosRoute: typeof ModulosRoute
   RadarRoute: typeof RadarRoute
   ModuloIdRoute: typeof ModuloIdRoute
@@ -76,6 +105,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/historico': {
+      id: '/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof HistoricoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lancamentos': {
+      id: '/lancamentos'
+      path: '/lancamentos'
+      fullPath: '/lancamentos'
+      preLoaderRoute: typeof LancamentosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/modulos': {
@@ -104,6 +147,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HistoricoRoute: HistoricoRoute,
+  LancamentosRoute: LancamentosRoute,
   ModulosRoute: ModulosRoute,
   RadarRoute: RadarRoute,
   ModuloIdRoute: ModuloIdRoute,
