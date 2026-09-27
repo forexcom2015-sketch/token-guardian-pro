@@ -1,4 +1,4 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Shell } from "@/components/shell";
 import { Trilha } from "@/components/trilha";
 import { ModuloPainel } from "@/components/modulo-painel";
@@ -35,7 +35,16 @@ function PaginaModulo() {
     <Shell status={<span className="font-mono text-muted-foreground">{pctGeral}% concluído</span>}>
       <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
         <Trilha pctGeral={pctGeral} porModulo={porModulo} ativo={modulo.id} />
-        <ModuloPainel key={modulo.id} modulo={modulo} progresso={progresso} marcar={marcar} />
+        <div className="space-y-6">
+          <ModuloPainel key={modulo.id} modulo={modulo} progresso={progresso} marcar={marcar} />
+          {modulo.id === modulos[modulos.length - 1]?.id && (
+            <div className="panel p-5">
+              <div className="label-eyebrow mb-2">Fim do curso</div>
+              <p className="text-sm text-muted-foreground">Agora analise um token real e confira cada item do checklist com dados ao vivo.</p>
+              <Link to="/radar" search={{ final: true }} className="mt-3 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Abrir análise final</Link>
+            </div>
+          )}
+        </div>
       </div>
     </Shell>
   );
