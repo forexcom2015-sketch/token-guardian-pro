@@ -23,7 +23,9 @@ function Relogio() {
 const navItens = [
   { to: "/", rotulo: "Trilha" },
   { to: "/modulos", rotulo: "Módulos" },
+  { to: "/lancamentos", rotulo: "Lançamentos" },
   { to: "/radar", rotulo: "Radar IA" },
+  { to: "/historico", rotulo: "Histórico" },
 ] as const;
 
 export function Shell({ status, children }: { status: ReactNode; children: ReactNode }) {

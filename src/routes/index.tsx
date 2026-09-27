@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Shell } from "@/components/shell";
 import { Trilha } from "@/components/trilha";
-import { RadarLista, useRadar } from "@/components/radar-lista";
 import { useProgresso } from "@/hooks/use-progresso";
 import { modulos } from "@/data/course";
 
@@ -21,7 +20,6 @@ export const Route = createFileRoute("/")({
 
 function Inicio() {
   const { pctGeral, porModulo } = useProgresso();
-  const radar = useRadar();
   const proximo = modulos.find((m) => (porModulo.find((p) => p.id === m.id)?.pct ?? 0) < 100) ?? modulos[0]!;
   return (
     <Shell status={<span className="font-mono text-muted-foreground">{pctGeral}% concluído</span>}>
@@ -43,13 +41,13 @@ function Inicio() {
               </Link>
             </div>
           </section>
-          <RadarLista
-            compacto
-            casos={radar.data?.casos ?? []}
-            carregando={radar.isPending}
-            erro={radar.error?.message}
-            onGerar={() => radar.mutate(undefined)}
-          />
+          <section className="panel p-6">
+            <div className="label-eyebrow mb-2">Análise final</div>
+            <p className="text-sm text-muted-foreground">
+              {pctGeral === 100 ? "Curso concluído! " : ""}Aplique o checklist num token real: escolha um lançamento ativo e o Radar IA pontua cada item com dados do DexScreener e GoPlus.
+            </p>
+            <Link to="/radar" search={{ final: true }} className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Fazer a análise final</Link>
+          </section>
         </div>
       </div>
     </Shell>

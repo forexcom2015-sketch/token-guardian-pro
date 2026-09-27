@@ -73,88 +73,56 @@ function extrairJson<T>(texto: string): T {
   return JSON.parse(limpo.slice(inicio, fim + 1)) as T;
 }
 
-export type ItemAnalise = {
-  categoria: string;
-  criterio: string;
-  nivel: "baixo" | "medio" | "alto" | "desconhecido";
-  leitura: string;
-  comoVerificar: string;
-};
+import type { DadosToken, Rede } from "./onchain.server";
+export type { DadosToken, Rede } from "./onchain.server";
 
-export type AnaliseToken = {
+const redeSchema = z.enum(["solana", "bsc", "ethereum", "base"]);
+
+export type ParecerIA = {
   resumo: string;
   score: number;
   nivelGeral: "baixo" | "medio" | "alto";
-  itens: ItemAnalise[];
-  perguntasAbertas: string[];
+  pontosAtencao: string[];
+  proximosPassos: string[];
 };
 
-const INSTRUCOES_ANALISE = `Você é um analista on-chain que ensina due diligence de tokens em lançamento, em português do Brasil.
-Você NÃO tem acesso a dados on-chain ao vivo. Trabalhe apenas com o que o usuário informou e, para o que faltar, use nível "desconhecido" e explique exatamente como verificar.
-Avalie sempre estas cinco categorias: "Liquidez e contrato", "Distribuição do supply", "Comportamento on-chain", "Tokenomics", "Sinais externos".
-Nunca recomende comprar ou vender. Fale de risco e verificação.
-Responda SOMENTE com JSON válido neste formato:
-{"resumo":string,"score":number (0-100, quanto maior mais arriscado),"nivelGeral":"baixo"|"medio"|"alto","itens":[{"categoria":string,"criterio":string,"nivel":"baixo"|"medio"|"alto"|"desconhecido","leitura":string,"comoVerificar":string}],"perguntasAbertas":[string]}
-Gere de 8 a 12 itens cobrindo as cinco categorias.`;
+export type AnaliseReal = { dados: DadosToken; parecer: ParecerIA | null; erroIA: string | null; geradoEm: string };
 
-export const analisarToken = createServerFn({ method: "POST" })
+const INSTRUCOES_PARECER = `Você é um analista on-chain de um curso de due diligence de tokens, em português do Brasil.
+Você recebe DADOS REAIS coletados agora do DexScreener e do GoPlus, já com um checklist pontuado (baixo/medio/alto/desconhecido).
+Não invente números: use só os dados recebidos. Itens "desconhecido" devem virar próximos passos de verificação.
+Considere as 5 categorias do curso: Liquidez e contrato, Distribuição do supply, Comportamento on-chain, Tokenomics, Sinais externos (redes sociais e histórico do dev não vêm nos dados: peça verificação manual).
+Nunca recomende comprar ou vender.
+Responda SOMENTE com JSON: {"resumo":string,"score":number (0-100, maior = mais arriscado),"nivelGeral":"baixo"|"medio"|"alto","pontosAtencao":[string],"proximosPassos":[string]}
+Máximo 5 itens em cada lista.`;
+
+export const analisarReal = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
-    z
-      .object({
-        endereco: z.string().min(3).max(120),
-        rede: z.string().min(2).max(40),
-        observacoes: z.string().max(2000).optional(),
-      })
-      .parse(data),
+    z.object({ rede: redeSchema, endereco: z.string().trim().min(20).max(80) }).parse(data),
   )
-  .handler(async ({ data }): Promise<AnaliseToken> => {
-    const entrada = [
-      `Endereço do contrato: ${data.endereco}`,
-      `Rede: ${data.rede}`,
-      data.observacoes?.trim()
-        ? `Dados que o aluno já levantou: ${data.observacoes.trim()}`
-        : "O aluno ainda não levantou dados on-chain.",
-    ].join("\n");
-
-    const texto = await chamarIA(INSTRUCOES_ANALISE, entrada);
-    const analise = extrairJson<AnaliseToken>(texto);
-    return {
-      ...analise,
-      score: Math.max(0, Math.min(100, Math.round(analise.score))),
-      itens: Array.isArray(analise.itens) ? analise.itens : [],
-      perguntasAbertas: Array.isArray(analise.perguntasAbertas) ? analise.perguntasAbertas : [],
-    };
+  .handler(async ({ data }): Promise<AnaliseReal> => {
+    const { coletarDados } = await import("./onchain.server");
+    const dados = await coletarDados(data.rede, data.endereco);
+    if (!dados.fontes.length) throw new Error("Token não encontrado no DexScreener nem no GoPlus para essa rede.");
+    let parecer: ParecerIA | null = null;
+    let erroIA: string | null = null;
+    try {
+      const p = extrairJson<ParecerIA>(await chamarIA(INSTRUCOES_PARECER, JSON.stringify(dados)));
+      parecer = {
+        resumo: String(p.resumo ?? ""),
+        score: Math.max(0, Math.min(100, Math.round(Number(p.score) || 0))),
+        nivelGeral: ["baixo", "medio", "alto"].includes(p.nivelGeral) ? p.nivelGeral : "medio",
+        pontosAtencao: Array.isArray(p.pontosAtencao) ? p.pontosAtencao.slice(0, 5) : [],
+        proximosPassos: Array.isArray(p.proximosPassos) ? p.proximosPassos.slice(0, 5) : [],
+      };
+    } catch (e) {
+      erroIA = e instanceof Error ? e.message : "A IA não respondeu.";
+    }
+    return { dados, parecer, erroIA, geradoEm: new Date().toISOString() };
   });
 
-export type CasoRadar = {
-  nome: string;
-  simbolo: string;
-  rede: string;
-  score: number;
-  nivel: "baixo" | "medio" | "alto";
-  destaques: string[];
-  alertas: string[];
-  exercicio: string;
-};
-
-const INSTRUCOES_RADAR = `Você monta cenários de treino para um curso de análise de tokens, em português do Brasil.
-Crie casos FICTÍCIOS e realistas de tokens recém-lançados (não use projetos reais e deixe claro que são simulações no exercício).
-Varie o nível de risco entre os casos. Cada caso deve cruzar liquidez/contrato, distribuição, comportamento on-chain, tokenomics e sinais externos.
-Responda SOMENTE com JSON válido:
-{"casos":[{"nome":string,"simbolo":string,"rede":string,"score":number (0-100, maior = mais arriscado),"nivel":"baixo"|"medio"|"alto","destaques":[string],"alertas":[string],"exercicio":string}]}
-Gere exatamente 4 casos.`;
-
-export const gerarRadar = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
-    z.object({ foco: z.string().max(200).optional() }).parse(data ?? {}),
-  )
-  .handler(async ({ data }): Promise<{ casos: CasoRadar[] }> => {
-    const texto = await chamarIA(
-      INSTRUCOES_RADAR,
-      data.foco?.trim()
-        ? `Foque os cenários em: ${data.foco.trim()}`
-        : "Gere cenários variados de lançamentos recentes em DEX.",
-    );
-    const resultado = extrairJson<{ casos: CasoRadar[] }>(texto);
-    return { casos: Array.isArray(resultado.casos) ? resultado.casos.slice(0, 4) : [] };
-  });
+export const listarLancamentos = createServerFn({ method: "GET" }).handler(async () => {
+  const { lancamentosRecentes } = await import("./onchain.server");
+  const redes: Rede[] = ["solana", "bsc", "ethereum", "base"];
+  return { tokens: await lancamentosRecentes(redes), atualizadoEm: new Date().toISOString() };
+});
