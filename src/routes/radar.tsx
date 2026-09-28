@@ -32,18 +32,12 @@ export const Route = createFileRoute("/radar")({
 function Radar() {
   const busca = Route.useSearch();
   const fn = useServerFn(analisarReal);
-  const { salvar, logado, pronto } = useHistorico();
+  const { salvar } = useHistorico();
   const [rede, setRede] = useState<Rede>(busca.rede ?? "solana");
   const [endereco, setEndereco] = useState(busca.endereco ?? "");
-  const [salvo, setSalvo] = useState<string | null>(null);
   const analise = useMutation<AnaliseReal, Error, { rede: Rede; endereco: string }>({
     mutationFn: (d) => fn({ data: d }),
-    onSuccess: (a) => {
-      setSalvo(null);
-      salvar(a)
-        .then((ok) => setSalvo(ok ? "Salvo no seu histórico." : null))
-        .catch((e: Error) => setSalvo(`Não foi possível salvar: ${e.message}`));
-    },
+    onSuccess: (a) => salvar(a),
   });
   const auto = useRef(false);
   useEffect(() => {
@@ -89,8 +83,6 @@ function Radar() {
             Não tem um token? Veja os <Link to="/lancamentos" className="text-signal underline">lançamentos ativos</Link>. Cada análise fica salva no <Link to="/historico" className="text-signal underline">histórico</Link>.
           </p>
         </div>
-        {pronto && !logado && <PedirLogin motivo="Entre com Google para salvar suas análises e vê-las em qualquer aparelho." />}
-        {salvo && <p className="text-xs text-muted-foreground">{salvo}</p>}
         {analise.data && <ResultadoAnalise analise={analise.data} />}
       </div>
     </Shell>
