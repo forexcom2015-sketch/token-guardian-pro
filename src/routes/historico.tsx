@@ -19,13 +19,14 @@ export const Route = createFileRoute("/historico")({
 });
 
 function Historico() {
-  const { itens, remover } = useHistorico();
+  const { itens, remover, logado, carregando } = useHistorico();
   const [aberto, setAberto] = useState<string | null>(null);
   return (
     <Shell status={<span className="font-mono text-muted-foreground">{itens.length} análises</span>}>
       <h1 className="mb-2 text-2xl font-semibold">Histórico</h1>
-      <p className="mb-6 text-xs text-muted-foreground">Fica salvo neste navegador.</p>
-      {!itens.length && (
+      <p className="mb-6 text-xs text-muted-foreground">Salvo na sua conta: aparece em qualquer aparelho.</p>
+      {!carregando && !logado && <PedirLogin motivo="Entre com Google para ver suas análises salvas." />}
+      {logado && !carregando && !itens.length && (
         <div className="panel p-6 text-sm text-muted-foreground">
           Nenhuma análise ainda. <Link to="/lancamentos" className="text-signal underline">Escolha um token novo</Link> para começar.
         </div>
@@ -35,7 +36,7 @@ function Historico() {
           const d = a.dados;
           const conta = (n: string) => d.checagens.filter((c) => c.nivel === n).length;
           return (
-            <div key={a.geradoEm} className="panel p-4">
+            <div key={a.id} className="panel p-4">
               <div className="flex flex-wrap items-center gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-card-foreground">{d.nome ?? "Token"} <span className="font-mono text-xs text-muted-foreground">{d.simbolo} · {nomesRede[d.rede]}</span></div>
