@@ -14,6 +14,7 @@ import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as LancamentosRouteImport } from './routes/lancamentos'
 import { Route as ModulosRouteImport } from './routes/modulos'
 import { Route as RadarRouteImport } from './routes/radar'
+import { Route as RastreioRouteImport } from './routes/rastreio'
 import { Route as ModuloIdRouteImport } from './routes/modulo.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,11 @@ const RadarRoute = RadarRouteImport.update({
   path: '/radar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RastreioRoute = RastreioRouteImport.update({
+  id: '/rastreio',
+  path: '/rastreio',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ModuloIdRoute = ModuloIdRouteImport.update({
   id: '/modulo/$id',
   path: '/modulo/$id',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/lancamentos': typeof LancamentosRoute
   '/modulos': typeof ModulosRoute
   '/radar': typeof RadarRoute
+  '/rastreio': typeof RastreioRoute
   '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/lancamentos': typeof LancamentosRoute
   '/modulos': typeof ModulosRoute
   '/radar': typeof RadarRoute
+  '/rastreio': typeof RastreioRoute
   '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRoutesById {
@@ -70,15 +78,28 @@ export interface FileRoutesById {
   '/lancamentos': typeof LancamentosRoute
   '/modulos': typeof ModulosRoute
   '/radar': typeof RadarRoute
+  '/rastreio': typeof RastreioRoute
   '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/historico' | '/lancamentos' | '/modulos' | '/radar' | '/modulo/$id'
+    | '/'
+    | '/historico'
+    | '/lancamentos'
+    | '/modulos'
+    | '/radar'
+    | '/rastreio'
+    | '/modulo/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/historico' | '/lancamentos' | '/modulos' | '/radar' | '/modulo/$id'
+    | '/'
+    | '/historico'
+    | '/lancamentos'
+    | '/modulos'
+    | '/radar'
+    | '/rastreio'
+    | '/modulo/$id'
   id:
     | '__root__'
     | '/'
@@ -86,6 +107,7 @@ export interface FileRouteTypes {
     | '/lancamentos'
     | '/modulos'
     | '/radar'
+    | '/rastreio'
     | '/modulo/$id'
   fileRoutesById: FileRoutesById
 }
@@ -95,6 +117,7 @@ export interface RootRouteChildren {
   LancamentosRoute: typeof LancamentosRoute
   ModulosRoute: typeof ModulosRoute
   RadarRoute: typeof RadarRoute
+  RastreioRoute: typeof RastreioRoute
   ModuloIdRoute: typeof ModuloIdRoute
 }
 
@@ -135,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RadarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rastreio': {
+      id: '/rastreio'
+      path: '/rastreio'
+      fullPath: '/rastreio'
+      preLoaderRoute: typeof RastreioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/modulo/$id': {
       id: '/modulo/$id'
       path: '/modulo/$id'
@@ -151,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   LancamentosRoute: LancamentosRoute,
   ModulosRoute: ModulosRoute,
   RadarRoute: RadarRoute,
+  RastreioRoute: RastreioRoute,
   ModuloIdRoute: ModuloIdRoute,
 }
 export const routeTree = rootRouteImport
