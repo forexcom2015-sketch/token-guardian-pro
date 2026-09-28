@@ -14,7 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analises: {
+        Row: {
+          analise: Json
+          endereco: string
+          gerado_em: string
+          id: string
+          nome: string | null
+          rede: string
+          score: number | null
+          simbolo: string | null
+          user_id: string
+        }
+        Insert: {
+          analise: Json
+          endereco: string
+          gerado_em?: string
+          id?: string
+          nome?: string | null
+          rede: string
+          score?: number | null
+          simbolo?: string | null
+          user_id: string
+        }
+        Update: {
+          analise?: Json
+          endereco?: string
+          gerado_em?: string
+          id?: string
+          nome?: string | null
+          rede?: string
+          score?: number | null
+          simbolo?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
