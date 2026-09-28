@@ -29,6 +29,7 @@ export function useMudou(valor: number | null | undefined) {
       return () => clearTimeout(t);
     }
     ant.current = valor;
+    return undefined;
   }, [valor]);
   return dir;
 }
