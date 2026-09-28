@@ -1,33 +1,59 @@
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
+import type { Json } from "@/integrations/supabase/types";
+import { supabase } from "@/integrations/supabase/client";
 import type { AnaliseReal } from "@/lib/token-ai.functions";
+import { useSessao } from "@/hooks/use-sessao";
 
-const KEY = "radar-ia-historico-v1";
-
-function ler(): AnaliseReal[] {
-  try {
-    return JSON.parse(window.localStorage.getItem(KEY) ?? "[]") as AnaliseReal[];
-  } catch {
-    return [];
-  }
-}
+export type AnaliseSalva = AnaliseReal & { id: string };
 
 export function useHistorico() {
-  const [itens, setItens] = useState<AnaliseReal[]>([]);
-  useEffect(() => setItens(ler()), []);
+  const { user, pronto } = useSessao();
+  const qc = useQueryClient();
+  const chave = ["historico", user?.id];
+  const q = useQuery({
+    queryKey: chave,
+    enabled: !!user,
+    queryFn: async (): Promise<AnaliseSalva[]> => {
+      const { data, error } = await supabase
+        .from("analises")
+        .select("id, analise")
+        .order("gerado_em", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return (data ?? []).map((r) => ({ ...(r.analise as unknown as AnaliseReal), id: r.id }));
+    },
+  });
 
-  const salvar = useCallback((a: AnaliseReal) => {
-    const lista = [a, ...ler()].slice(0, 100);
-    window.localStorage.setItem(KEY, JSON.stringify(lista));
-    setItens(lista);
-  }, []);
+  const salvar = useCallback(
+    async (a: AnaliseReal) => {
+      if (!user) return false;
+      const { error } = await supabase.from("analises").insert({
+        user_id: user.id,
+        rede: a.dados.rede,
+        endereco: a.dados.endereco,
+        nome: a.dados.nome,
+        simbolo: a.dados.simbolo,
+        score: a.parecer?.score ?? null,
+        analise: a as unknown as Json,
+        gerado_em: a.geradoEm,
+      });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["historico"] });
+      return true;
+    },
+    [user, qc],
+  );
 
-  const remover = useCallback((geradoEm: string) => {
-    const lista = ler().filter((i) => i.geradoEm !== geradoEm);
-    window.localStorage.setItem(KEY, JSON.stringify(lista));
-    setItens(lista);
-  }, []);
+  const remover = useCallback(
+    async (id: string) => {
+      await supabase.from("analises").delete().eq("id", id);
+      qc.invalidateQueries({ queryKey: ["historico"] });
+    },
+    [qc],
+  );
 
-  return { itens, salvar, remover };
+  return { itens: q.data ?? [], carregando: !pronto || q.isLoading, logado: !!user, pronto, salvar, remover };
 }
 
 export const nomesRede: Record<string, string> = { solana: "Solana", bsc: "BSC", ethereum: "Ethereum", base: "Base" };
@@ -54,8 +80,10 @@ export function linksToken(rede: string, endereco: string) {
     ethereum: `https://etherscan.io/token/${endereco}`,
     base: `https://basescan.org/token/${endereco}`,
   };
+  const gecko: Record<string, string> = { solana: "solana", bsc: "bsc", ethereum: "eth", base: "base" };
   return [
     { rotulo: "DexScreener", url: `https://dexscreener.com/${rede}/${endereco}` },
+    { rotulo: "GeckoTerminal", url: `https://www.geckoterminal.com/${gecko[rede]}/tokens/${endereco}` },
     { rotulo: "Explorer", url: explorer[rede] ?? "#" },
     { rotulo: "GoPlus", url: `https://gopluslabs.io/token-security/${rede === "solana" ? "solana" : { bsc: 56, ethereum: 1, base: 8453 }[rede]}/${endereco}` },
   ];

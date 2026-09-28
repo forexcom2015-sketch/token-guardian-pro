@@ -48,6 +48,7 @@ export function ResultadoAnalise({ analise }: { analise: AnaliseReal }) {
             </div>
           ))}
         </div>
+        <AoVivo rede={dados.rede} endereco={dados.endereco} />
       </div>
 
       {parecer ? (
