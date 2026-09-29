@@ -39,13 +39,14 @@ function Radar() {
     mutationFn: (d) => fn({ data: d }),
     onSuccess: (a) => salvar(a),
   });
-  const auto = useRef(false);
+  const mutar = useRef(analise.mutate);
+  mutar.current = analise.mutate;
   useEffect(() => {
-    if (!auto.current && busca.rede && busca.endereco) {
-      auto.current = true;
-      analise.mutate({ rede: busca.rede, endereco: busca.endereco });
-    }
-  }, [busca.rede, busca.endereco, analise]);
+    if (!busca.rede || !busca.endereco) return;
+    const { rede: r, endereco: e } = busca;
+    const t = setTimeout(() => mutar.current({ rede: r, endereco: e }), 0);
+    return () => clearTimeout(t);
+  }, [busca.rede, busca.endereco]);
 
   return (
     <Shell status={<span className="text-signal">Dados ao vivo</span>}>
