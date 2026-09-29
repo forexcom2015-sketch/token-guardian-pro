@@ -92,7 +92,7 @@ function Radar() {
               {analise.isPending ? "Coletando dados…" : "Analisar"}
             </button>
           </form>
-          {analise.isError && <p className="mt-2 text-xs text-danger">{analise.error.message}</p>}
+          {analise.isError && <p className="mt-2 text-xs text-danger">{analise.error?.message}</p>}
           <p className="mt-3 text-[11px] text-muted-foreground">
             Não tem um token? Veja os <Link to="/lancamentos" className="text-signal underline">lançamentos ativos</Link>. Cada análise fica salva no <Link to="/historico" className="text-signal underline">histórico</Link>.
           </p>
