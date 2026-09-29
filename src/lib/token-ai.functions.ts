@@ -10,6 +10,7 @@ async function chamarIA(instrucoes: string, entrada: string): Promise<string> {
 
   const response = await fetch(GATEWAY, {
     method: "POST",
+    signal: AbortSignal.timeout(60000),
     headers: {
       "Content-Type": "application/json",
       "Lovable-API-Key": apiKey,
