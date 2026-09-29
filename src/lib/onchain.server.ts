@@ -183,7 +183,9 @@ export async function coletarDados(rede: Rede, endereco: string): Promise<DadosT
     const liq = p.liquidezUsd ?? 0;
     const razao = p.fdv && liq ? liq / p.fdv : null;
     checagens.push(
-      { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: liq < 10000 ? "alto" : liq < 50000 ? "medio" : "baixo", valor: `$${Math.round(liq).toLocaleString("en-US")}${razao ? ` (${(razao * 100).toFixed(1)}% do FDV)` : ""}` },
+      p.liquidezUsd === null
+        ? { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: "desconhecido", valor: `Sem pool de liquidez ainda (${p.dex === "pumpfun" ? "na curva de bonding do pump.fun" : "DexScreener não informa"})` }
+        : { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: liq < 10000 ? "alto" : liq < 50000 ? "medio" : "baixo", valor: `$${Math.round(liq).toLocaleString("en-US")}${razao ? ` (${(razao * 100).toFixed(1)}% do FDV)` : ""}` },
       { categoria: "Comportamento on-chain", criterio: "Compras vs vendas (24h)", nivel: p.vendas24h === 0 && p.compras24h > 20 ? "alto" : "baixo", valor: `${p.compras24h} compras / ${p.vendas24h} vendas${p.vendas24h === 0 && p.compras24h > 20 ? " — ninguém vende: possível honeypot" : ""}` },
       { categoria: "Comportamento on-chain", criterio: "Volume vs liquidez", nivel: p.volume24h && liq && p.volume24h / liq > 30 ? "medio" : "baixo", valor: `Volume 24h $${Math.round(p.volume24h ?? 0).toLocaleString("en-US")}` },
     );

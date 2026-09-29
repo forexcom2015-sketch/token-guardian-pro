@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
@@ -31,21 +31,35 @@ export const Route = createFileRoute("/radar")({
 
 function Radar() {
   const busca = Route.useSearch();
+  const navigate = Route.useNavigate();
   const fn = useServerFn(analisarReal);
   const { salvar } = useHistorico();
   const [rede, setRede] = useState<Rede>(busca.rede ?? "solana");
   const [endereco, setEndereco] = useState(busca.endereco ?? "");
-  const analise = useMutation<AnaliseReal, Error, { rede: Rede; endereco: string }>({
-    mutationFn: (d) => fn({ data: d }),
-    onSuccess: (a) => salvar(a),
+  const alvo = busca.rede && busca.endereco ? { rede: busca.rede, endereco: busca.endereco } : null;
+  const consulta = useQuery<AnaliseReal, Error>({
+    queryKey: ["analise", alvo?.rede, alvo?.endereco],
+    queryFn: () => fn({ data: alvo! }),
+    enabled: !!alvo,
+    staleTime: Infinity,
+    retry: false,
   });
-  const auto = useRef(false);
+  const salvarRef = useRef(salvar);
+  salvarRef.current = salvar;
+  const salvoEm = useRef<string | null>(null);
   useEffect(() => {
-    if (!auto.current && busca.rede && busca.endereco) {
-      auto.current = true;
-      analise.mutate({ rede: busca.rede, endereco: busca.endereco });
+    if (consulta.data && salvoEm.current !== consulta.data.geradoEm) {
+      salvoEm.current = consulta.data.geradoEm;
+      salvarRef.current(consulta.data);
     }
-  }, [busca.rede, busca.endereco, analise]);
+  }, [consulta.data]);
+  const analise = {
+    isPending: consulta.isFetching,
+    isError: consulta.isError,
+    error: consulta.error,
+    data: consulta.data,
+    mutate: (d: { rede: Rede; endereco: string }) => navigate({ search: { ...busca, ...d } }),
+  };
 
   return (
     <Shell status={<span className="text-signal">Dados ao vivo</span>}>
@@ -78,7 +92,7 @@ function Radar() {
               {analise.isPending ? "Coletando dados…" : "Analisar"}
             </button>
           </form>
-          {analise.isError && <p className="mt-2 text-xs text-danger">{analise.error.message}</p>}
+          {analise.isError && <p className="mt-2 text-xs text-danger">{analise.error?.message}</p>}
           <p className="mt-3 text-[11px] text-muted-foreground">
             Não tem um token? Veja os <Link to="/lancamentos" className="text-signal underline">lançamentos ativos</Link>. Cada análise fica salva no <Link to="/historico" className="text-signal underline">histórico</Link>.
           </p>
