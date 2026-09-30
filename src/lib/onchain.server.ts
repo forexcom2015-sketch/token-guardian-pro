@@ -118,6 +118,11 @@ type GoPlusMapa = Record<string, Record<string, unknown>>;
 
 async function goplusLote(rede: Rede, enderecos: string[]): Promise<GoPlusMapa> {
   if (!enderecos.length) return {};
+  if (rede === "solana" && enderecos.length > 1) {
+    // O endpoint de Solana só responde um token por chamada.
+    const partes = await Promise.all(enderecos.map((e) => goplusLote("solana", [e])));
+    return Object.assign({}, ...partes) as GoPlusMapa;
+  }
   const url = rede === "solana"
     ? `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${enderecos.join(",")}`
     : `https://api.gopluslabs.io/api/v1/token_security/${GOPLUS_CHAIN[rede]}?contract_addresses=${enderecos.join(",")}`;
@@ -197,7 +202,7 @@ export function notaRisco(checagens: Checagem[], semSeguranca: boolean): NotaRis
   const conta = (n: Checagem["nivel"]) => checagens.filter((c) => c.nivel === n).length;
   const altos = conta("alto"), medios = conta("medio"), desconhecidos = conta("desconhecido");
   const critico = checagens.some((c) => c.nivel === "alto" && /Honeypot|Freeze|Mint/.test(c.criterio));
-  let nota = altos * 15 + medios * 6 + desconhecidos * 4 + (semSeguranca ? 30 : 0) + (critico ? 25 : 0);
+  let nota = altos * 15 + medios * 6 + desconhecidos * 4 + (semSeguranca ? 50 : 0) + (critico ? 25 : 0);
   nota = Math.min(100, nota);
   return { nota, nivel: nota >= 50 ? "alto" : nota >= 20 ? "medio" : "baixo", altos, medios, desconhecidos, alertas: checagens.filter((c) => c.nivel === "alto").map((c) => c.criterio).slice(0, 3), semSeguranca };
 }
