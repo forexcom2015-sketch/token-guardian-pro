@@ -114,11 +114,20 @@ function somaTop10(holders: Holder[] | undefined, fator: number): number | null 
   return Math.round(lista.reduce((s, h) => s + Number(h.percent ?? 0) * fator, 0) * 10) / 10;
 }
 
-async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string) {
-  const r = await getJson<{ result?: Record<string, Record<string, unknown>> }>(
-    `https://api.gopluslabs.io/api/v1/token_security/${GOPLUS_CHAIN[rede]}?contract_addresses=${endereco}`,
-  );
-  const d = r?.result?.[endereco.toLowerCase()];
+type GoPlusMapa = Record<string, Record<string, unknown>>;
+
+async function goplusLote(rede: Rede, enderecos: string[]): Promise<GoPlusMapa> {
+  if (!enderecos.length) return {};
+  const url = rede === "solana"
+    ? `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${enderecos.join(",")}`
+    : `https://api.gopluslabs.io/api/v1/token_security/${GOPLUS_CHAIN[rede]}?contract_addresses=${enderecos.join(",")}`;
+  const r = await getJson<{ result?: GoPlusMapa }>(url);
+  return r?.result ?? {};
+}
+
+async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string, pre?: GoPlusMapa) {
+  const res = pre ?? (await goplusLote(rede, [endereco]));
+  const d = res[endereco.toLowerCase()];
   if (!d) return null;
   const buy = Number(d["buy_tax"] ?? NaN) * 100;
   const sell = Number(d["sell_tax"] ?? NaN) * 100;
@@ -145,11 +154,9 @@ async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string) {
   return { checagens, holders: Number(d["holder_count"] ?? 0) || null, top10, nome: (d["token_name"] as string) ?? null, simbolo: (d["token_symbol"] as string) ?? null };
 }
 
-async function segurancaSolana(endereco: string) {
-  const r = await getJson<{ result?: Record<string, Record<string, unknown>> }>(
-    `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${endereco}`,
-  );
-  const d = r?.result?.[endereco];
+async function segurancaSolana(endereco: string, pre?: GoPlusMapa) {
+  const res = pre ?? (await goplusLote("solana", [endereco]));
+  const d = res[endereco];
   if (!d) return null;
   const st = (k: string) => sim((d[k] as { status?: string } | undefined)?.status);
   const dex = (d["dex"] as { burn_percent?: number | null; tvl?: string }[] | undefined) ?? [];
@@ -171,25 +178,37 @@ async function segurancaSolana(endereco: string) {
   return { checagens, holders: Number(d["holder_count"] ?? 0) || null, top10, nome: meta?.name ?? null, simbolo: meta?.symbol ?? null };
 }
 
+function checagensMercado(p: ParMercado): Checagem[] {
+  const liq = p.liquidezUsd ?? 0;
+  const razao = p.fdv && liq ? liq / p.fdv : null;
+  return [
+    p.liquidezUsd === null
+      ? { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: "desconhecido", valor: `Sem pool de liquidez ainda (${p.dex === "pumpfun" ? "na curva de bonding do pump.fun" : "DexScreener não informa"})` }
+      : { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: liq < 10000 ? "alto" : liq < 50000 ? "medio" : "baixo", valor: `$${Math.round(liq).toLocaleString("en-US")}${razao ? ` (${(razao * 100).toFixed(1)}% do FDV)` : ""}` },
+    { categoria: "Comportamento on-chain", criterio: "Compras vs vendas (24h)", nivel: p.vendas24h === 0 && p.compras24h > 20 ? "alto" : "baixo", valor: `${p.compras24h} compras / ${p.vendas24h} vendas${p.vendas24h === 0 && p.compras24h > 20 ? " — ninguém vende: possível honeypot" : ""}` },
+    { categoria: "Comportamento on-chain", criterio: "Volume vs liquidez", nivel: p.volume24h && liq && p.volume24h / liq > 30 ? "medio" : "baixo", valor: `Volume 24h $${Math.round(p.volume24h ?? 0).toLocaleString("en-US")}` },
+  ];
+}
+
+export type NotaRisco = { nota: number; nivel: "baixo" | "medio" | "alto"; altos: number; medios: number; desconhecidos: number; alertas: string[]; semSeguranca: boolean };
+
+/** Nota determinística 0-100 (maior = mais arriscado) a partir do checklist. */
+export function notaRisco(checagens: Checagem[], semSeguranca: boolean): NotaRisco {
+  const conta = (n: Checagem["nivel"]) => checagens.filter((c) => c.nivel === n).length;
+  const altos = conta("alto"), medios = conta("medio"), desconhecidos = conta("desconhecido");
+  const critico = checagens.some((c) => c.nivel === "alto" && /Honeypot|Freeze|Mint/.test(c.criterio));
+  let nota = altos * 15 + medios * 6 + desconhecidos * 4 + (semSeguranca ? 30 : 0) + (critico ? 25 : 0);
+  nota = Math.min(100, nota);
+  return { nota, nivel: nota >= 50 ? "alto" : nota >= 20 ? "medio" : "baixo", altos, medios, desconhecidos, alertas: checagens.filter((c) => c.nivel === "alto").map((c) => c.criterio).slice(0, 3), semSeguranca };
+}
+
 export async function coletarDados(rede: Rede, endereco: string): Promise<DadosToken> {
   const [pares, seg] = await Promise.all([
     paresDex(rede, [endereco]),
     rede === "solana" ? segurancaSolana(endereco) : segurancaEvm(rede, endereco),
   ]);
   const dex = pares.get(endereco.toLowerCase());
-  const checagens = seg?.checagens ?? [];
-  if (dex) {
-    const p = dex.par;
-    const liq = p.liquidezUsd ?? 0;
-    const razao = p.fdv && liq ? liq / p.fdv : null;
-    checagens.push(
-      p.liquidezUsd === null
-        ? { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: "desconhecido", valor: `Sem pool de liquidez ainda (${p.dex === "pumpfun" ? "na curva de bonding do pump.fun" : "DexScreener não informa"})` }
-        : { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: liq < 10000 ? "alto" : liq < 50000 ? "medio" : "baixo", valor: `$${Math.round(liq).toLocaleString("en-US")}${razao ? ` (${(razao * 100).toFixed(1)}% do FDV)` : ""}` },
-      { categoria: "Comportamento on-chain", criterio: "Compras vs vendas (24h)", nivel: p.vendas24h === 0 && p.compras24h > 20 ? "alto" : "baixo", valor: `${p.compras24h} compras / ${p.vendas24h} vendas${p.vendas24h === 0 && p.compras24h > 20 ? " — ninguém vende: possível honeypot" : ""}` },
-      { categoria: "Comportamento on-chain", criterio: "Volume vs liquidez", nivel: p.volume24h && liq && p.volume24h / liq > 30 ? "medio" : "baixo", valor: `Volume 24h $${Math.round(p.volume24h ?? 0).toLocaleString("en-US")}` },
-    );
-  }
+  const checagens = [...(seg?.checagens ?? []), ...(dex ? checagensMercado(dex.par) : [])];
   return {
     rede,
     endereco,
@@ -220,16 +239,22 @@ export async function lancamentosRecentes(redes: Rede[]) {
     vistos.add(k);
     porRede.set(rede, [...(porRede.get(rede) ?? []), p]);
   }
-  const resultado: { rede: Rede; endereco: string; nome: string; simbolo: string; icone: string | null; descricao: string | null; mercado: ParMercado }[] = [];
+  const resultado: { rede: Rede; endereco: string; nome: string; simbolo: string; icone: string | null; descricao: string | null; mercado: ParMercado; risco: NotaRisco }[] = [];
   await Promise.all(
     [...porRede.entries()].map(async ([rede, lista]) => {
-      const pares = await paresDex(rede, lista.map((l) => l.tokenAddress));
+      const ends = lista.map((l) => l.tokenAddress).slice(0, 30);
+      const [pares, gp] = await Promise.all([paresDex(rede, ends), goplusLote(rede, ends)]);
       for (const l of lista) {
         const d = pares.get(l.tokenAddress.toLowerCase());
         if (!d) continue;
-        resultado.push({ rede, endereco: l.tokenAddress, nome: d.nome, simbolo: d.simbolo, icone: l.icon ?? null, descricao: l.description ?? null, mercado: d.par });
+        const seg = rede === "solana" ? await segurancaSolana(l.tokenAddress, gp) : await segurancaEvm(rede, l.tokenAddress, gp);
+        const risco = notaRisco([...(seg?.checagens ?? []), ...checagensMercado(d.par)], !seg);
+        resultado.push({ rede, endereco: l.tokenAddress, nome: d.nome, simbolo: d.simbolo, icone: l.icon ?? null, descricao: l.description ?? null, mercado: d.par, risco });
       }
     }),
   );
-  return resultado.sort((a, b) => (b.mercado.criadoEm ?? 0) - (a.mercado.criadoEm ?? 0)).slice(0, 30);
+  return resultado
+    .sort((a, b) => (b.mercado.criadoEm ?? 0) - (a.mercado.criadoEm ?? 0))
+    .slice(0, 30)
+    .sort((a, b) => a.risco.nota - b.risco.nota || (b.mercado.liquidezUsd ?? 0) - (a.mercado.liquidezUsd ?? 0));
 }
