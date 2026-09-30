@@ -87,13 +87,6 @@ function linha(a: AnaliseReal, userId: string) {
   };
 }
 
-er((i) => i.geradoEm !== geradoEm);
-    window.localStorage.setItem(KEY, JSON.stringify(lista));
-    setItens(lista);
-  }, []);
-
-  return { itens, salvar, remover };
-}
 
 export const nomesRede: Record<string, string> = { solana: "Solana", bsc: "BSC", ethereum: "Ethereum", base: "Base" };
 
