@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { suconst KEY = "radar-ia-historico-v1";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import type { AnaliseReal } from "@/lib/token-ai.functions";
+
+const KEY = "radar-ia-historico-v1";
 
 function ler(): AnaliseReal[] {
   try {
