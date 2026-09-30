@@ -10,15 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as LancamentosRouteImport } from './routes/lancamentos'
 import { Route as ModulosRouteImport } from './routes/modulos'
+import { Route as PainelRouteImport } from './routes/painel'
 import { Route as RadarRouteImport } from './routes/radar'
 import { Route as ModuloIdRouteImport } from './routes/modulo.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoricoRoute = HistoricoRouteImport.update({
@@ -36,6 +43,11 @@ const ModulosRoute = ModulosRouteImport.update({
   path: '/modulos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RadarRoute = RadarRouteImport.update({
   id: '/radar',
   path: '/radar',
@@ -49,51 +61,75 @@ const ModuloIdRoute = ModuloIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/historico': typeof HistoricoRoute
   '/lancamentos': typeof LancamentosRoute
   '/modulos': typeof ModulosRoute
+  '/painel': typeof PainelRoute
   '/radar': typeof RadarRoute
   '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/historico': typeof HistoricoRoute
   '/lancamentos': typeof LancamentosRoute
   '/modulos': typeof ModulosRoute
+  '/painel': typeof PainelRoute
   '/radar': typeof RadarRoute
   '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/historico': typeof HistoricoRoute
   '/lancamentos': typeof LancamentosRoute
   '/modulos': typeof ModulosRoute
+  '/painel': typeof PainelRoute
   '/radar': typeof RadarRoute
   '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/historico' | '/lancamentos' | '/modulos' | '/radar' | '/modulo/$id'
-  fileRoutesByTo: FileRoutesByTo
-  to:
-    '/' | '/historico' | '/lancamentos' | '/modulos' | '/radar' | '/modulo/$id'
-  id:
-    | '__root__'
     | '/'
+    | '/auth'
     | '/historico'
     | '/lancamentos'
     | '/modulos'
+    | '/painel'
+    | '/radar'
+    | '/modulo/$id'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/auth'
+    | '/historico'
+    | '/lancamentos'
+    | '/modulos'
+    | '/painel'
+    | '/radar'
+    | '/modulo/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/historico'
+    | '/lancamentos'
+    | '/modulos'
+    | '/painel'
     | '/radar'
     | '/modulo/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
   HistoricoRoute: typeof HistoricoRoute
   LancamentosRoute: typeof LancamentosRoute
   ModulosRoute: typeof ModulosRoute
+  PainelRoute: typeof PainelRoute
   RadarRoute: typeof RadarRoute
   ModuloIdRoute: typeof ModuloIdRoute
 }
@@ -105,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/historico': {
@@ -128,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/radar': {
       id: '/radar'
       path: '/radar'
@@ -147,9 +197,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
   HistoricoRoute: HistoricoRoute,
   LancamentosRoute: LancamentosRoute,
   ModulosRoute: ModulosRoute,
+  PainelRoute: PainelRoute,
   RadarRoute: RadarRoute,
   ModuloIdRoute: ModuloIdRoute,
 }
