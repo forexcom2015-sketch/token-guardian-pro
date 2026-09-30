@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Shell } from "@/components/shell";
+import { SeloRisco } from "@/components/risco";
 import { listarLancamentos } from "@/lib/token-ai.functions";
 import { idade, nomesRede, usd } from "@/lib/historico";
 
@@ -42,13 +43,14 @@ function Lancamentos() {
       <div className="panel overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="text-left text-[10px] uppercase tracking-widest text-muted-foreground">
-            <tr>{["Token", "Rede", "Idade", "Liquidez", "FDV", "Vol 24h", "Compras/Vendas 1h", "Var 24h", ""].map((h) => <th key={h} className="px-3 py-2 font-normal">{h}</th>)}</tr>
+            <tr>{["Risco", "Token", "Rede", "Idade", "Liquidez", "FDV", "Vol 24h", "Compras/Vendas 1h", "Var 24h", ""].map((h) => <th key={h} className="px-3 py-2 font-normal">{h}</th>)}</tr>
           </thead>
           <tbody className="divide-y divide-border">
             {tokens.map((t) => {
               const m = t.mercado;
               return (
                 <tr key={t.rede + t.endereco} className="hover:bg-secondary/40">
+                  <td className="px-3 py-2"><SeloRisco risco={t.risco} /></td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       {t.icone && <img src={t.icone} alt="" className="h-6 w-6 rounded-full" loading="lazy" />}
@@ -75,7 +77,7 @@ function Lancamentos() {
         </table>
         {q.isSuccess && !tokens.length && <p className="p-4 text-xs text-muted-foreground">Nenhum token novo nessa rede agora.</p>}
       </div>
-      <p className="mt-4 text-[11px] text-muted-foreground">Tokens novos são os de maior risco. Lista informativa, não é recomendação.</p>
+      <p className="mt-4 text-[11px] text-muted-foreground">Ordenado do menor para o maior risco (nota 0–100 pelo checklist real do GoPlus e DexScreener). Tokens novos são sempre arriscados. Lista informativa, não é recomendação.</p>
     </Shell>
   );
 }
