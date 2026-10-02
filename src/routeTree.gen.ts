@@ -17,7 +17,6 @@ import { Route as ModulosRouteImport } from './routes/modulos'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as RadarRouteImport } from './routes/radar'
 import { Route as ModuloIdRouteImport } from './routes/modulo.$id'
-import { Route as TokenRedeEnderecoRouteImport } from './routes/token.$rede.$endereco'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -59,11 +58,6 @@ const ModuloIdRoute = ModuloIdRouteImport.update({
   path: '/modulo/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TokenRedeEnderecoRoute = TokenRedeEnderecoRouteImport.update({
-  id: '/token/$rede/$endereco',
-  path: '/token/$rede/$endereco',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -74,7 +68,6 @@ export interface FileRoutesByFullPath {
   '/painel': typeof PainelRoute
   '/radar': typeof RadarRoute
   '/modulo/$id': typeof ModuloIdRoute
-  '/token/$rede/$endereco': typeof TokenRedeEnderecoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -85,7 +78,6 @@ export interface FileRoutesByTo {
   '/painel': typeof PainelRoute
   '/radar': typeof RadarRoute
   '/modulo/$id': typeof ModuloIdRoute
-  '/token/$rede/$endereco': typeof TokenRedeEnderecoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,7 +89,6 @@ export interface FileRoutesById {
   '/painel': typeof PainelRoute
   '/radar': typeof RadarRoute
   '/modulo/$id': typeof ModuloIdRoute
-  '/token/$rede/$endereco': typeof TokenRedeEnderecoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,7 +101,6 @@ export interface FileRouteTypes {
     | '/painel'
     | '/radar'
     | '/modulo/$id'
-    | '/token/$rede/$endereco'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -121,7 +111,6 @@ export interface FileRouteTypes {
     | '/painel'
     | '/radar'
     | '/modulo/$id'
-    | '/token/$rede/$endereco'
   id:
     | '__root__'
     | '/'
@@ -132,7 +121,6 @@ export interface FileRouteTypes {
     | '/painel'
     | '/radar'
     | '/modulo/$id'
-    | '/token/$rede/$endereco'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -144,7 +132,6 @@ export interface RootRouteChildren {
   PainelRoute: typeof PainelRoute
   RadarRoute: typeof RadarRoute
   ModuloIdRoute: typeof ModuloIdRoute
-  TokenRedeEnderecoRoute: typeof TokenRedeEnderecoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -205,13 +192,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModuloIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/token/$rede/$endereco': {
-      id: '/token/$rede/$endereco'
-      path: '/token/$rede/$endereco'
-      fullPath: '/token/$rede/$endereco'
-      preLoaderRoute: typeof TokenRedeEnderecoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -224,7 +204,6 @@ const rootRouteChildren: RootRouteChildren = {
   PainelRoute: PainelRoute,
   RadarRoute: RadarRoute,
   ModuloIdRoute: ModuloIdRoute,
-  TokenRedeEnderecoRoute: TokenRedeEnderecoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

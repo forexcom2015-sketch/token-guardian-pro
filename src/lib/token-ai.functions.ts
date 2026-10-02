@@ -74,8 +74,8 @@ function extrairJson<T>(texto: string): T {
   return JSON.parse(limpo.slice(inicio, fim + 1)) as T;
 }
 
-import type { DadosToken, NotaRisco, Rede } from "./onchain.server";
-export type { DadosToken, NotaRisco, Rede } from "./onchain.server";
+import type { DadosToken, Rede } from "./onchain.server";
+export type { DadosToken, Rede } from "./onchain.server";
 
 const redeSchema = z.enum(["solana", "bsc", "ethereum", "base"]);
 
@@ -85,19 +85,16 @@ export type ParecerIA = {
   nivelGeral: "baixo" | "medio" | "alto";
   pontosAtencao: string[];
   proximosPassos: string[];
-  avaliacoes: { categoria: string; avaliacao: string }[];
 };
 
-export type AnaliseReal = { dados: DadosToken; risco?: NotaRisco; parecer: ParecerIA | null; erroIA: string | null; geradoEm: string };
+export type AnaliseReal = { dados: DadosToken; parecer: ParecerIA | null; erroIA: string | null; geradoEm: string };
 
 const INSTRUCOES_PARECER = `Você é um analista on-chain de um curso de due diligence de tokens, em português do Brasil.
 Você recebe DADOS REAIS coletados agora do DexScreener e do GoPlus, já com um checklist pontuado (baixo/medio/alto/desconhecido).
 Não invente números: use só os dados recebidos. Itens "desconhecido" devem virar próximos passos de verificação.
 Considere as 5 categorias do curso: Liquidez e contrato, Distribuição do supply, Comportamento on-chain, Tokenomics, Sinais externos (redes sociais e histórico do dev não vêm nos dados: peça verificação manual).
-Você também recebe "notaDeterministica" (0-100, maior = mais arriscado), calculada pelo checklist; use-a como referência para o score e explique se divergir.
-Escreva uma avaliação curta (2-3 frases, citando os números reais) para cada uma das 5 categorias.
 Nunca recomende comprar ou vender.
-Responda SOMENTE com JSON: {"resumo":string,"score":number (0-100, maior = mais arriscado),"nivelGeral":"baixo"|"medio"|"alto","avaliacoes":[{"categoria":string,"avaliacao":string}],"pontosAtencao":[string],"proximosPassos":[string]}
+Responda SOMENTE com JSON: {"resumo":string,"score":number (0-100, maior = mais arriscado),"nivelGeral":"baixo"|"medio"|"alto","pontosAtencao":[string],"proximosPassos":[string]}
 Máximo 5 itens em cada lista.`;
 
 export const analisarReal = createServerFn({ method: "POST" })
@@ -105,28 +102,24 @@ export const analisarReal = createServerFn({ method: "POST" })
     z.object({ rede: redeSchema, endereco: z.string().trim().min(20).max(80) }).parse(data),
   )
   .handler(async ({ data }): Promise<AnaliseReal> => {
-    const { coletarDados, notaRisco } = await import("./onchain.server");
+    const { coletarDados } = await import("./onchain.server");
     const dados = await coletarDados(data.rede, data.endereco);
     if (!dados.fontes.length) throw new Error("Token não encontrado no DexScreener nem no GoPlus para essa rede.");
-    const risco = notaRisco(dados.checagens, !dados.fontes.includes("GoPlus Security"));
     let parecer: ParecerIA | null = null;
     let erroIA: string | null = null;
     try {
-      const p = extrairJson<ParecerIA>(await chamarIA(INSTRUCOES_PARECER, JSON.stringify({ ...dados, notaDeterministica: risco.nota })));
+      const p = extrairJson<ParecerIA>(await chamarIA(INSTRUCOES_PARECER, JSON.stringify(dados)));
       parecer = {
         resumo: String(p.resumo ?? ""),
         score: Math.max(0, Math.min(100, Math.round(Number(p.score) || 0))),
         nivelGeral: ["baixo", "medio", "alto"].includes(p.nivelGeral) ? p.nivelGeral : "medio",
         pontosAtencao: Array.isArray(p.pontosAtencao) ? p.pontosAtencao.slice(0, 5) : [],
         proximosPassos: Array.isArray(p.proximosPassos) ? p.proximosPassos.slice(0, 5) : [],
-        avaliacoes: Array.isArray(p.avaliacoes)
-          ? p.avaliacoes.slice(0, 6).map((a) => ({ categoria: String(a?.categoria ?? ""), avaliacao: String(a?.avaliacao ?? "") }))
-          : [],
       };
     } catch (e) {
       erroIA = e instanceof Error ? e.message : "A IA não respondeu.";
     }
-    return { dados, risco, parecer, erroIA, geradoEm: new Date().toISOString() };
+    return { dados, parecer, erroIA, geradoEm: new Date().toISOString() };
   });
 
 export const listarLancamentos = createServerFn({ method: "GET" }).handler(async () => {

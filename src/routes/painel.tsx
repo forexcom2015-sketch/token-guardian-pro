@@ -1,6 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { registrarPainel } from "@/lib/serie";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Shell } from "@/components/shell";
@@ -26,7 +24,6 @@ function Painel() {
   const fn = useServerFn(listarLancamentos);
   const q = useQuery({ queryKey: ["lancamentos"], queryFn: () => fn(), refetchInterval: 60_000 });
   const tokens = q.data?.tokens ?? [];
-  useEffect(() => { if (q.data) registrarPainel(q.data.tokens); }, [q.data]);
   const n = (nv: string) => tokens.filter((t) => t.risco.nivel === nv).length;
 
   return (
@@ -66,7 +63,6 @@ function Painel() {
               {t.risco.desconhecidos > 0 && ` · ${t.risco.desconhecidos} itens sem dados`}
             </div>
             <div className="flex gap-3 text-[11px]">
-              <Link to="/token/$rede/$endereco" params={{ rede: t.rede, endereco: t.endereco }} className="font-medium text-card-foreground underline">Histórico e gráfico</Link>
               {linksToken(t.rede, t.endereco).map((l) => <a key={l.rotulo} href={l.url} target="_blank" rel="noreferrer" className="text-signal hover:underline">{l.rotulo}</a>)}
             </div>
           </li>

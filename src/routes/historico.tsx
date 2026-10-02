@@ -47,12 +47,10 @@ function Historico() {
                   <span className="flex items-center gap-1"><NivelPonto nivel="alto" />{conta("alto")}</span>
                   <span className="flex items-center gap-1"><NivelPonto nivel="medio" />{conta("medio")}</span>
                   <span className="flex items-center gap-1"><NivelPonto nivel="baixo" />{conta("baixo")}</span>
-                  {a.risco && <span className="font-mono text-lg text-card-foreground" title="Nota do checklist">{a.risco.nota}</span>}
-                  {a.parecer && <span className="font-mono text-xs text-muted-foreground" title="Nota da IA">IA {a.parecer.score}</span>}
+                  {a.parecer && <span className="font-mono text-lg text-card-foreground">{a.parecer.score}</span>}
                 </div>
                 <div className="flex gap-3 text-xs">
                   {linksToken(d.rede, d.endereco).map((l) => <a key={l.rotulo} href={l.url} target="_blank" rel="noreferrer" className="text-signal hover:underline">{l.rotulo}</a>)}
-                  <Link to="/token/$rede/$endereco" params={{ rede: d.rede, endereco: d.endereco }} className="text-card-foreground underline">Gráfico</Link>
                   <button onClick={() => setAberto(aberto === a.geradoEm ? null : a.geradoEm)} className="text-card-foreground underline">{aberto === a.geradoEm ? "Fechar" : "Ver"}</button>
                   <button onClick={() => remover(a.geradoEm)} className="text-danger">Excluir</button>
                 </div>
