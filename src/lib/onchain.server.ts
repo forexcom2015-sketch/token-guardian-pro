@@ -126,8 +126,26 @@ async function goplusLote(rede: Rede, enderecos: string[]): Promise<GoPlusMapa> 
   const url = rede === "solana"
     ? `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${enderecos.join(",")}`
     : `https://api.gopluslabs.io/api/v1/token_security/${GOPLUS_CHAIN[rede]}?contract_addresses=${enderecos.join(",")}`;
-  const r = await getJson<{ result?: GoPlusMapa }>(url);
-  return r?.result ?? {};
+  return goplusFila(url);
+}
+
+// O GoPlus derruba rajadas: no máx. 3 chamadas simultâneas, com nova tentativa.
+let ativos = 0;
+const espera: (() => void)[] = [];
+async function goplusFila(url: string): Promise<GoPlusMapa> {
+  if (ativos >= 3) await new Promise<void>((r) => espera.push(r));
+  ativos++;
+  try {
+    for (let i = 0; i < 3; i++) {
+      const r = await getJson<{ code?: number; result?: GoPlusMapa }>(url);
+      if (r?.code === 1 && r.result && Object.keys(r.result).length) return r.result;
+      await new Promise((ok) => setTimeout(ok, 700 * (i + 1)));
+    }
+    return {};
+  } finally {
+    ativos--;
+    espera.shift()?.();
+  }
 }
 
 async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string, pre?: GoPlusMapa) {
