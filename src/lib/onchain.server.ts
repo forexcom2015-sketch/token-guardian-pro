@@ -227,9 +227,21 @@ export async function coletarDados(rede: Rede, endereco: string): Promise<DadosT
   };
 }
 
-type Perfil = { chainId: string; tokenAddress: string; icon?: string; description?: string };
+// Última checagem de segurança válida por token: evita "Sem checagem" quando o GoPlus limita requisições.
+const cacheSeg = new Map<string, { seg: any; t: number }>();
+let cacheLista: { t: number; chave: string; dados: Awaited<ReturnType<typeof lancamentosCru>> } | null = null;
 
 export async function lancamentosRecentes(redes: Rede[]) {
+  const chave = redes.join(",");
+  if (cacheLista && cacheLista.chave === chave && Date.now() - cacheLista.t < 45_000) return cacheLista.dados;
+  const dados = await lancamentosCru(redes);
+  cacheLista = { t: Date.now(), chave, dados };
+  return dados;
+}
+
+type Perfil = { chainId: string; tokenAddress: string; icon?: string; description?: string };
+
+async function lancamentosCru(redes: Rede[]) {
   const [perfis, boosts] = await Promise.all([
     getJson<Perfil[]>("https://api.dexscreener.com/token-profiles/latest/v1"),
     getJson<Perfil[]>("https://api.dexscreener.com/token-boosts/latest/v1"),
@@ -252,7 +264,10 @@ export async function lancamentosRecentes(redes: Rede[]) {
       for (const l of lista) {
         const d = pares.get(l.tokenAddress.toLowerCase());
         if (!d) continue;
-        const seg = rede === "solana" ? await segurancaSolana(l.tokenAddress, gp) : await segurancaEvm(rede, l.tokenAddress, gp);
+        const ck = `${rede}:${l.tokenAddress}`;
+        let seg = rede === "solana" ? await segurancaSolana(l.tokenAddress, gp) : await segurancaEvm(rede, l.tokenAddress, gp);
+        if (seg) cacheSeg.set(ck, { seg, t: Date.now() });
+        else { const c = cacheSeg.get(ck); if (c && Date.now() - c.t < 30 * 60_000) seg = c.seg; }
         const risco = notaRisco([...(seg?.checagens ?? []), ...checagensMercado(d.par)], !seg);
         resultado.push({ rede, endereco: l.tokenAddress, nome: d.nome, simbolo: d.simbolo, icone: l.icon ?? null, descricao: l.description ?? null, mercado: d.par, risco });
       }
