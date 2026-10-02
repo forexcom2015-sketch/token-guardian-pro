@@ -25,20 +25,22 @@ export function ResultadoAnalise({ analise }: { analise: AnaliseReal }) {
               ))}
             </div>
           </div>
-          {analise.risco && (
-            <div className="flex gap-6"><div className="text-right">
-              <div className="font-mono text-3xl text-card-foreground">{analise.risco.nota}</div>
-              <div className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">Nota do checklist</div>
-            </div>
-          )}
-          {parecer && (
-            <div className="text-right">
-              <div className="font-mono text-3xl text-card-foreground">{parecer.score}</div>
-              <div className="mt-1 flex items-center justify-end gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <NivelPonto nivel={parecer.nivelGeral} /> IA · {rotuloNivel[parecer.nivelGeral]}
+          <div className="flex gap-6">
+            {analise.risco && (
+              <div className="text-right">
+                <div className="font-mono text-3xl text-card-foreground">{analise.risco.nota}</div>
+                <div className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">Nota do checklist</div>
               </div>
-            </div>
-          )}
+            )}
+            {parecer && (
+              <div className="text-right">
+                <div className="font-mono text-3xl text-card-foreground">{parecer.score}</div>
+                <div className="mt-1 flex items-center justify-end gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+                  <NivelPonto nivel={parecer.nivelGeral} /> IA · {rotuloNivel[parecer.nivelGeral]}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-5">
           {[
