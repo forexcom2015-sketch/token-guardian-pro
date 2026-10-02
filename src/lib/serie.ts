@@ -24,7 +24,7 @@ export function registrarPainel(tokens: { rede: string; endereco: string; risco:
   }
   const chaves = Object.keys(m);
   if (chaves.length > 300) {
-    chaves.sort((a, b) => (m[a].at(-1)?.t ?? 0) - (m[b].at(-1)?.t ?? 0)).slice(0, chaves.length - 300).forEach((k) => delete m[k]);
+    chaves.sort((a, b) => (m[a]?.at(-1)?.t ?? 0) - (m[b]?.at(-1)?.t ?? 0)).slice(0, chaves.length - 300).forEach((k) => delete m[k]);
   }
   window.localStorage.setItem(KEY, JSON.stringify(m));
 }

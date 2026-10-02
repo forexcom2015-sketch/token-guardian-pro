@@ -6,7 +6,7 @@ const nomes = { painel: "Painel (a cada minuto)", analise: "Checklist no Radar",
 export function GraficoRisco({ pontos }: { pontos: Ponto[] }) {
   if (pontos.length === 0) return <p className="text-xs text-muted-foreground">Ainda sem pontuações para este token.</p>;
   const W = 640, H = 200, P = 28;
-  const t0 = pontos[0].t, t1 = Math.max(pontos[pontos.length - 1].t, t0 + 60_000);
+  const t0 = pontos[0]!.t, t1 = Math.max(pontos[pontos.length - 1]!.t, t0 + 60_000);
   const x = (t: number) => P + ((t - t0) / (t1 - t0)) * (W - 2 * P);
   const y = (n: number) => H - P - (n / 100) * (H - 2 * P);
   const fontes = (["painel", "analise", "ia"] as const).filter((f) => pontos.some((p) => p.fonte === f));
