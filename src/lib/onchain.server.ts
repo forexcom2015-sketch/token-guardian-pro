@@ -261,7 +261,18 @@ export async function coletarDados(rede: Rede, endereco: string): Promise<DadosT
 
 type Perfil = { chainId: string; tokenAddress: string; icon?: string; description?: string };
 
-export async function lancamentosRecentes(redes: Rede[]) {
+let cacheLista: { em: number; chave: string; p: ReturnType<typeof lancamentosSemCache> } | null = null;
+
+export function lancamentosRecentes(redes: Rede[]) {
+  const chave = redes.join(",");
+  if (cacheLista && cacheLista.chave === chave && Date.now() - cacheLista.em < 45_000) return cacheLista.p;
+  const p = lancamentosSemCache(redes);
+  cacheLista = { em: Date.now(), chave, p };
+  p.catch(() => { cacheLista = null; });
+  return p;
+}
+
+async function lancamentosSemCache(redes: Rede[]) {
   const [perfis, boosts] = await Promise.all([
     getJson<Perfil[]>("https://api.dexscreener.com/token-profiles/latest/v1"),
     getJson<Perfil[]>("https://api.dexscreener.com/token-boosts/latest/v1"),
