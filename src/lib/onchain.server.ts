@@ -116,17 +116,49 @@ function somaTop10(holders: Holder[] | undefined, fator: number): number | null 
 
 type GoPlusMapa = Record<string, Record<string, unknown>>;
 
+// Cache por token (10 min) — evita repetir checagens e o limite de requisições do GoPlus.
+const cacheGoplus = new Map<string, { em: number; dado: Record<string, unknown> }>();
+const TTL_GOPLUS = 10 * 60_000;
+const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function goplusSolanaUm(endereco: string): Promise<Record<string, unknown> | null> {
+  const k = `solana:${endereco}`;
+  const c = cacheGoplus.get(k);
+  if (c && Date.now() - c.em < TTL_GOPLUS) return c.dado;
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    const r = await getJson<{ code?: number; result?: GoPlusMapa }>(
+      `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${endereco}`,
+    );
+    const res = r?.result ?? {};
+    const dado = res[endereco] ?? res[endereco.toLowerCase()] ?? Object.values(res)[0];
+    if (dado) {
+      cacheGoplus.set(k, { em: Date.now(), dado });
+      return dado;
+    }
+    await espera(800 * (tentativa + 1));
+  }
+  return null;
+}
+
 async function goplusLote(rede: Rede, enderecos: string[]): Promise<GoPlusMapa> {
   if (!enderecos.length) return {};
-  if (rede === "solana" && enderecos.length > 1) {
-    // O endpoint de Solana só responde um token por chamada.
-    const partes = await Promise.all(enderecos.map((e) => goplusLote("solana", [e])));
-    return Object.assign({}, ...partes) as GoPlusMapa;
+  if (rede === "solana") {
+    // O endpoint de Solana responde um token por chamada: fila com 3 em paralelo.
+    const saida: GoPlusMapa = {};
+    const fila = [...enderecos];
+    await Promise.all(
+      Array.from({ length: 3 }, async () => {
+        for (let e = fila.shift(); e; e = fila.shift()) {
+          const d = await goplusSolanaUm(e);
+          if (d) saida[e] = d;
+        }
+      }),
+    );
+    return saida;
   }
-  const url = rede === "solana"
-    ? `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${enderecos.join(",")}`
-    : `https://api.gopluslabs.io/api/v1/token_security/${GOPLUS_CHAIN[rede]}?contract_addresses=${enderecos.join(",")}`;
-  const r = await getJson<{ result?: GoPlusMapa }>(url);
+  const r = await getJson<{ result?: GoPlusMapa }>(
+    `https://api.gopluslabs.io/api/v1/token_security/${GOPLUS_CHAIN[rede]}?contract_addresses=${enderecos.join(",")}`,
+  );
   return r?.result ?? {};
 }
 
@@ -229,7 +261,18 @@ export async function coletarDados(rede: Rede, endereco: string): Promise<DadosT
 
 type Perfil = { chainId: string; tokenAddress: string; icon?: string; description?: string };
 
-export async function lancamentosRecentes(redes: Rede[]) {
+let cacheLista: { em: number; chave: string; p: ReturnType<typeof lancamentosSemCache> } | null = null;
+
+export function lancamentosRecentes(redes: Rede[]) {
+  const chave = redes.join(",");
+  if (cacheLista && cacheLista.chave === chave && Date.now() - cacheLista.em < 45_000) return cacheLista.p;
+  const p = lancamentosSemCache(redes);
+  cacheLista = { em: Date.now(), chave, p };
+  p.catch(() => { cacheLista = null; });
+  return p;
+}
+
+async function lancamentosSemCache(redes: Rede[]) {
   const [perfis, boosts] = await Promise.all([
     getJson<Perfil[]>("https://api.dexscreener.com/token-profiles/latest/v1"),
     getJson<Perfil[]>("https://api.dexscreener.com/token-boosts/latest/v1"),
