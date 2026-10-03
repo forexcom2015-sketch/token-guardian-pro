@@ -6,6 +6,8 @@ import { SeloRisco } from "@/components/risco";
 import { listarLancamentos } from "@/lib/token-ai.functions";
 import { idade, linksToken, nomesRede, usd } from "@/lib/historico";
 
+const corNivel = { baixo: "text-signal", medio: "text-warn", alto: "text-danger", desconhecido: "text-muted-foreground" } as const;
+
 export const Route = createFileRoute("/painel")({
   head: () => ({
     meta: [
