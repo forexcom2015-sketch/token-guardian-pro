@@ -227,7 +227,10 @@ function checagensMercado(p: ParMercado): Checagem[] {
   ];
 }
 
-export type NotaRisco = { nota: number; nivel: "baixo" | "medio" | "alto"; altos: number; medios: number; desconhecidos: number; alertas: string[]; semSeguranca: boolean };
+export type ItemNota = { criterio: string; categoria: string; valor: string; nivel: Checagem["nivel"]; pontos: number };
+export type NotaRisco = { nota: number; nivel: "baixo" | "medio" | "alto"; altos: number; medios: number; desconhecidos: number; alertas: string[]; semSeguranca: boolean; itens: ItemNota[] };
+
+const PONTOS: Record<Checagem["nivel"], number> = { alto: 15, medio: 6, desconhecido: 4, baixo: 0 };
 
 /** Nota determinística 0-100 (maior = mais arriscado) a partir do checklist. */
 export function notaRisco(checagens: Checagem[], semSeguranca: boolean): NotaRisco {
@@ -236,7 +239,10 @@ export function notaRisco(checagens: Checagem[], semSeguranca: boolean): NotaRis
   const critico = checagens.some((c) => c.nivel === "alto" && /Honeypot|Freeze|Mint/.test(c.criterio));
   let nota = altos * 15 + medios * 6 + desconhecidos * 4 + (semSeguranca ? 50 : 0) + (critico ? 25 : 0);
   nota = Math.min(100, nota);
-  return { nota, nivel: nota >= 50 ? "alto" : nota >= 20 ? "medio" : "baixo", altos, medios, desconhecidos, alertas: checagens.filter((c) => c.nivel === "alto").map((c) => c.criterio).slice(0, 3), semSeguranca };
+  const itens: ItemNota[] = checagens.map((c) => ({ criterio: c.criterio, categoria: c.categoria, valor: c.valor, nivel: c.nivel, pontos: PONTOS[c.nivel] }));
+  if (critico) itens.push({ criterio: "Sinal crítico (honeypot/freeze/mint)", categoria: "Liquidez e contrato", valor: "Agravante aplicado à nota", nivel: "alto", pontos: 25 });
+  if (semSeguranca) itens.push({ criterio: "Sem checagem de segurança", categoria: "Liquidez e contrato", valor: "GoPlus não retornou dados", nivel: "desconhecido", pontos: 50 });
+  return { nota, nivel: nota >= 50 ? "alto" : nota >= 20 ? "medio" : "baixo", altos, medios, desconhecidos, alertas: checagens.filter((c) => c.nivel === "alto").map((c) => c.criterio).slice(0, 3), semSeguranca, itens };
 }
 
 export async function coletarDados(rede: Rede, endereco: string): Promise<DadosToken> {
