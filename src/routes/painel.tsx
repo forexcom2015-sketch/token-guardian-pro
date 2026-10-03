@@ -6,6 +6,8 @@ import { SeloRisco } from "@/components/risco";
 import { listarLancamentos } from "@/lib/token-ai.functions";
 import { idade, linksToken, nomesRede, usd } from "@/lib/historico";
 
+const corNivel = { baixo: "text-signal", medio: "text-warn", alto: "text-danger", desconhecido: "text-muted-foreground" } as const;
+
 export const Route = createFileRoute("/painel")({
   head: () => ({
     meta: [
@@ -62,6 +64,22 @@ function Painel() {
               {t.risco.alertas.length ? <span className="text-danger">Alertas: {t.risco.alertas.join(", ")}</span> : "Sem alertas graves"}
               {t.risco.desconhecidos > 0 && ` · ${t.risco.desconhecidos} itens sem dados`}
             </div>
+            <details className="group text-[11px]">
+              <summary className="cursor-pointer select-none text-muted-foreground hover:text-card-foreground">
+                Nota {t.risco.nota}/100 — ver o que cada item contribui
+              </summary>
+              <ul className="mt-2 grid gap-1 border-t border-border pt-2">
+                {[...t.risco.itens].sort((a, b) => b.pontos - a.pontos).map((item) => (
+                  <li key={item.criterio} className="flex items-baseline gap-2">
+                    <span className={`w-8 shrink-0 text-right font-mono ${item.pontos > 0 ? corNivel[item.nivel] : "text-muted-foreground"}`}>+{item.pontos}</span>
+                    <span className="min-w-0">
+                      <span className="text-card-foreground">{item.criterio}</span>
+                      <span className="text-muted-foreground"> · {item.valor}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
             <div className="flex gap-3 text-[11px]">
               {linksToken(t.rede, t.endereco).map((l) => <a key={l.rotulo} href={l.url} target="_blank" rel="noreferrer" className="text-signal hover:underline">{l.rotulo}</a>)}
             </div>
