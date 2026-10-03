@@ -191,10 +191,60 @@ async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string, pre
   return { checagens, holders: Number(d["holder_count"] ?? 0) || null, top10, nome: (d["token_name"] as string) ?? null, simbolo: (d["token_symbol"] as string) ?? null };
 }
 
+// RPC público da Solana: lê o mint direto na blockchain quando o GoPlus não cobre o token.
+const cacheRpc = new Map<string, { em: number; dado: { mintAtivo: boolean | null; freezeAtivo: boolean | null; top10Pct: number | null; supply: number | null } }>();
+
+async function solanaRpc(metodo: string, params: unknown[]): Promise<unknown> {
+  try {
+    const r = await fetch("https://api.mainnet-beta.solana.com", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: metodo, params }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!r.ok) return null;
+    return ((await r.json()) as { result?: unknown }).result ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function solanaOnChain(mint: string) {
+  const c = cacheRpc.get(mint);
+  if (c && Date.now() - c.em < TTL_GOPLUS) return c.dado;
+  const [info, maiores] = await Promise.all([
+    solanaRpc("getAccountInfo", [mint, { encoding: "jsonParsed" }]),
+    solanaRpc("getTokenLargestAccounts", [mint]),
+  ]);
+  const parsed = (info as { value?: { data?: { parsed?: { info?: { mintAuthority?: string | null; freezeAuthority?: string | null; supply?: string; decimals?: number } } } } } | null)?.value?.data?.parsed?.info;
+  const contas = ((maiores as { value?: { amount?: string; uiAmount?: number }[] } | null)?.value ?? []).filter((a) => Number(a.amount ?? 0) > 0);
+  const supply = Number(parsed?.supply ?? 0);
+  const top10Pct = supply > 0 && contas.length ? Math.round((contas.slice(0, 10).reduce((s, a) => s + Number(a.amount ?? 0), 0) / supply) * 1000) / 10 : null;
+  const dado = {
+    mintAtivo: parsed ? parsed.mintAuthority != null : null,
+    freezeAtivo: parsed ? parsed.freezeAuthority != null : null,
+    top10Pct,
+    supply: supply || null,
+  };
+  cacheRpc.set(mint, { em: Date.now(), dado });
+  return dado;
+}
+
 async function segurancaSolana(endereco: string, pre?: GoPlusMapa) {
   const res = pre ?? (await goplusLote("solana", [endereco]));
   const d = res[endereco];
-  if (!d) return null;
+  const onchain = await solanaOnChain(endereco);
+  if (!d) {
+    // GoPlus sem dados: pontua mesmo assim com o que a blockchain informa.
+    if (onchain.mintAtivo === null && onchain.top10Pct === null) return null;
+    const checagens: Checagem[] = [
+      { categoria: "Liquidez e contrato", criterio: "Liquidez queimada/travada", nivel: "desconhecido", valor: "Sem dados (curva de bonding ou pool sem registro)" },
+      { categoria: "Liquidez e contrato", criterio: "Mint authority", nivel: onchain.mintAtivo === null ? "desconhecido" : onchain.mintAtivo ? "alto" : "baixo", valor: onchain.mintAtivo === null ? "?" : onchain.mintAtivo ? "Ativa — podem criar tokens" : "Revogada" },
+      { categoria: "Liquidez e contrato", criterio: "Freeze authority", nivel: onchain.freezeAtivo === null ? "desconhecido" : onchain.freezeAtivo ? "alto" : "baixo", valor: onchain.freezeAtivo === null ? "?" : onchain.freezeAtivo ? "Ativa — podem congelar carteiras (honeypot)" : "Revogada" },
+      { categoria: "Distribuição do supply", criterio: "Top 10 carteiras", nivel: nivelTop10(onchain.top10Pct), valor: onchain.top10Pct === null ? "?" : `${onchain.top10Pct}% do supply` },
+    ];
+    return { checagens, holders: null, top10: onchain.top10Pct, nome: null, simbolo: null };
+  }
   const st = (k: string) => sim((d[k] as { status?: string } | undefined)?.status);
   const dex = (d["dex"] as { burn_percent?: number | null; tvl?: string }[] | undefined) ?? [];
   const principal = [...dex].sort((a, b) => Number(b.tvl ?? 0) - Number(a.tvl ?? 0))[0];
