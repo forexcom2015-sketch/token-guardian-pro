@@ -62,7 +62,7 @@ export function useHistorico() {
 
   const remover = useCallback(async (geradoEm: string) => {
     if (user) {
-      await supabase.from("analises").delete().eq("gerado_em", geradoEm);
+      await supabase.from("analises").delete().eq("user_id", user.id).eq("gerado_em", geradoEm);
       setItens((l) => l.filter((i) => i.geradoEm !== geradoEm));
       return;
     }
