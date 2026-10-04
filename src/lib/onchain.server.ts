@@ -362,3 +362,66 @@ async function lancamentosSemCache(redes: Rede[]) {
     .slice(0, 30)
     .sort((a, b) => a.risco.nota - b.risco.nota || (b.mercado.liquidezUsd ?? 0) - (a.mercado.liquidezUsd ?? 0));
 }
+
+
+export type TokenDesempenho = {
+  rede: Rede;
+  endereco: string;
+  nome: string;
+  simbolo: string;
+  icone: string | null;
+  mercado: ParMercado;
+  desempenho24h: number | null;
+  idadeHoras: number | null;
+};
+
+let cacheDesempenho: { em: number; resultado: TokenDesempenho[] } | null = null;
+
+/**
+ * Ranking dos candidatos recentes identificados nos feeds públicos do DexScreener.
+ * A variação percentual é a janela móvel de 24h informada pelo DexScreener,
+ * não o retorno acumulado desde o lançamento.
+ */
+export async function rankingDesempenho(): Promise<{ tokens: TokenDesempenho[]; atualizadoEm: string; cobertura: string }> {
+  if (cacheDesempenho && Date.now() - cacheDesempenho.em < 60_000) {
+    return { tokens: cacheDesempenho.resultado, atualizadoEm: new Date(cacheDesempenho.em).toISOString(), cobertura: "Perfis recentes e tokens promovidos disponíveis nos feeds públicos do DexScreener; não representa todos os pares criados." };
+  }
+  const redes: Rede[] = ["solana", "bsc", "ethereum", "base"];
+  const [perfis, boosts] = await Promise.all([
+    getJson<Perfil[]>("https://api.dexscreener.com/token-profiles/latest/v1"),
+    getJson<Perfil[]>("https://api.dexscreener.com/token-boosts/latest/v1"),
+  ]);
+  const unicos = new Map<string, Perfil>();
+  for (const p of [...(perfis ?? []), ...(boosts ?? [])]) {
+    if (!redes.includes(p.chainId as Rede) || !p.tokenAddress) continue;
+    unicos.set(`${p.chainId}:${p.tokenAddress.toLowerCase()}`, p);
+  }
+  const porRede = new Map<Rede, Perfil[]>();
+  for (const p of unicos.values()) {
+    const rede = p.chainId as Rede;
+    porRede.set(rede, [...(porRede.get(rede) ?? []), p]);
+  }
+  const resultado: TokenDesempenho[] = [];
+  await Promise.all([...porRede.entries()].map(async ([rede, lista]) => {
+    const mapa = await paresDex(rede, lista.slice(0, 30).map((p) => p.tokenAddress));
+    for (const p of lista.slice(0, 30)) {
+      const token = mapa.get(p.tokenAddress.toLowerCase());
+      if (!token || token.par.criadoEm === null) continue;
+      const idadeHoras = (Date.now() - token.par.criadoEm) / 3_600_000;
+      if (idadeHoras < 0 || idadeHoras > 7 * 24) continue;
+      resultado.push({
+        rede,
+        endereco: p.tokenAddress,
+        nome: token.nome,
+        simbolo: token.simbolo,
+        icone: p.icon ?? null,
+        mercado: token.par,
+        desempenho24h: token.par.variacao24h,
+        idadeHoras: Math.floor(idadeHoras),
+      });
+    }
+  }));
+  resultado.sort((a, b) => (b.desempenho24h ?? -Infinity) - (a.desempenho24h ?? -Infinity));
+  cacheDesempenho = { em: Date.now(), resultado };
+  return { tokens: resultado, atualizadoEm: new Date().toISOString(), cobertura: "Perfis recentes e tokens promovidos disponíveis nos feeds públicos do DexScreener; não representa todos os pares criados." };
+}
