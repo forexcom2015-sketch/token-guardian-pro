@@ -1,16 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Shell } from "@/components/shell";
-import { Trilha } from "@/components/trilha";
-import { useProgresso } from "@/hooks/use-progresso";
-import { modulos } from "@/data/course";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Radar.IA — Curso de análise de tokens com IA" },
-      { name: "description", content: "Aprenda a analisar tokens em lançamento: liquidez, contrato, distribuição, tokenomics e sinais externos, com IA para treino." },
-      { property: "og:title", content: "Radar.IA — Curso de análise de tokens com IA" },
-      { property: "og:description", content: "Curso interativo para identificar rugs e honeypots antes de comprar." },
+      { title: "Token Guardian IA — análise pública de risco cripto" },
+      { name: "description", content: "Analise tokens em lançamento com dados de mercado, indicadores on-chain e checklist de risco assistido por IA." },
+      { property: "og:title", content: "Token Guardian IA" },
+      { property: "og:description", content: "Análise pública de tokens, liquidez e riscos on-chain." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -19,36 +16,41 @@ export const Route = createFileRoute("/")({
 });
 
 function Inicio() {
-  const { pctGeral, porModulo } = useProgresso();
-  const proximo = modulos.find((m) => (porModulo.find((p) => p.id === m.id)?.pct ?? 0) < 100) ?? modulos[0]!;
   return (
-    <Shell status={<span className="font-mono text-muted-foreground">{pctGeral}% concluído</span>}>
-      <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
-        <Trilha pctGeral={pctGeral} porModulo={porModulo} />
-        <div className="space-y-8">
-          <section className="panel p-6">
-            <div className="label-eyebrow mb-2">Curso interativo</div>
-            <h1 className="text-2xl font-semibold text-card-foreground">Análise de tokens em lançamento</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Cinco módulos para separar projetos sérios de rugs e honeypots: liquidez e contrato, distribuição, tokenomics e sinais externos. Use o Radar IA para treinar com cenários e analisar contratos.
-            </p>
-            <div className="mt-5 flex gap-3">
-              <Link to="/modulo/$id" params={{ id: proximo.id }} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-                Continuar: {proximo.titulo}
-              </Link>
-              <Link to="/radar" className="rounded-md border border-border px-4 py-2 text-sm text-card-foreground">
-                Abrir Radar IA
-              </Link>
-            </div>
-          </section>
-          <section className="panel p-6">
-            <div className="label-eyebrow mb-2">Análise final</div>
-            <p className="text-sm text-muted-foreground">
-              {pctGeral === 100 ? "Curso concluído! " : ""}Aplique o checklist num token real: escolha um lançamento ativo e o Radar IA pontua cada item com dados do DexScreener e GoPlus.
-            </p>
-            <Link to="/radar" search={{ final: true }} className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Fazer a análise final</Link>
-          </section>
-        </div>
+    <Shell status={<span className="text-signal">Acesso público · sem login</span>}>
+      <div className="mx-auto max-w-5xl space-y-8">
+        <section className="panel relative overflow-hidden p-8 md:p-12">
+          <div className="label-eyebrow mb-3">Inteligência on-chain · análise de risco</div>
+          <h1 className="max-w-3xl text-3xl font-semibold leading-tight text-card-foreground md:text-5xl">
+            Entenda os riscos de um token <span className="text-signal">antes de negociar.</span>
+          </h1>
+          <p className="mt-5 max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+            Consulte indicadores de liquidez, contrato, atividade de mercado e sinais de segurança em uma única análise. Acesse gratuitamente, sem criar conta.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link to="/radar" className="rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground">Analisar um token</Link>
+            <Link to="/lancamentos" className="rounded-md border border-border px-5 py-3 text-sm text-card-foreground">Explorar lançamentos</Link>
+            <Link to="/painel" className="rounded-md border border-border px-5 py-3 text-sm text-card-foreground">Ver painel de risco</Link>
+          </div>
+          <p className="mt-6 text-[11px] text-muted-foreground">Os indicadores ajudam na investigação, mas não garantem segurança nem eliminam o risco de perda.</p>
+        </section>
+        <section className="grid gap-4 md:grid-cols-3">
+          <article className="panel p-5">
+            <div className="label-eyebrow mb-2">01 · Mercado</div>
+            <h2 className="font-medium text-card-foreground">Liquidez e atividade</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Consulte volume, idade do par, variação e relação entre compras e vendas.</p>
+          </article>
+          <article className="panel p-5">
+            <div className="label-eyebrow mb-2">02 · Segurança</div>
+            <h2 className="font-medium text-card-foreground">Sinais on-chain</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Reúna indicadores de contrato, permissões, concentração e possíveis restrições.</p>
+          </article>
+          <article className="panel p-5">
+            <div className="label-eyebrow mb-2">03 · Inteligência</div>
+            <h2 className="font-medium text-card-foreground">Checklist explicado</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Veja os fatores que contribuíram para a pontuação e os dados que não puderam ser verificados.</p>
+          </article>
+        </section>
       </div>
     </Shell>
   );
