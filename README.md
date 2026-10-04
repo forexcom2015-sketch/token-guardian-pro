@@ -6,6 +6,7 @@ Aplicação pública para análise de risco de tokens cripto. O visitante pode a
 
 - **Radar IA:** análise de token por rede e endereço, com checklist de risco e parecer assistido por IA.
 - **Pré-lançamentos:** descoberta via perfis e tokens recém-promovidos do DexScreener, com métricas de mercado e checklist de segurança sob demanda. Tokens listados podem já estar negociando; não é uma lista oficial de lançamentos futuros.
+- **Top desempenho:** ranking dos candidatos recentes disponíveis nos feeds públicos, filtrados por idade do par (24h, 48h ou 7 dias) e ordenados pela variação móvel de preço em 24h. Não representa o retorno acumulado desde a criação nem o universo completo de lançamentos.
 - **Painel de risco:** visualização comparativa de indicadores e alertas.
 - **Histórico local:** as análises são guardadas no navegador do usuário; não é necessário criar conta.
 
