@@ -79,6 +79,27 @@ export type { DadosToken, Rede } from "./onchain.server";
 
 const redeSchema = z.enum(["solana", "bsc", "ethereum", "base"]);
 
+const enderecoSchema = z.string().trim().superRefine((endereco, ctx) => {
+  // Validate by chain before using the address in upstream API query parameters.
+  // EVM contract addresses are 20-byte hex; Solana mint addresses use base58.
+  const evm = /^0x[a-fA-F0-9]{40}$/;
+  const solana = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  // The network is validated in the containing object; accept either address
+  // shape here, then enforce the correct one with the object-level refinement.
+  if (!evm.test(endereco) && !solana.test(endereco)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Endereço de token inválido." });
+  }
+});
+
+const entradaTokenSchema = z.object({ rede: redeSchema, endereco: enderecoSchema }).superRefine((data, ctx) => {
+  const valido = data.rede === "solana"
+    ? /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(data.endereco)
+    : /^0x[a-fA-F0-9]{40}$/.test(data.endereco);
+  if (!valido) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endereco"], message: "O endereço não corresponde à rede selecionada." });
+  }
+});
+
 export type ParecerIA = {
   resumo: string;
   score: number;
@@ -99,7 +120,7 @@ Máximo 5 itens em cada lista.`;
 
 export const analisarReal = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
-    z.object({ rede: redeSchema, endereco: z.string().trim().min(20).max(80) }).parse(data),
+    entradaTokenSchema.parse(data),
   )
   .handler(async ({ data }): Promise<AnaliseReal> => {
     const { coletarDados } = await import("./onchain.server");
