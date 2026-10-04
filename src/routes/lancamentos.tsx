@@ -10,9 +10,9 @@ import { idade, nomesRede, usd } from "@/lib/historico";
 export const Route = createFileRoute("/lancamentos")({
   head: () => ({
     meta: [
-      { title: "Pré-lançamentos e segurança — Token Guardian IA" },
+      { title: "Lançamentos recentes e segurança — Token Guardian IA" },
       { name: "description", content: "Descubra tokens recém-listados e confira indicadores de segurança com dados do DexScreener, GoPlus Security e blockchain Solana." },
-      { property: "og:title", content: "Pré-lançamentos e segurança — Token Guardian IA" },
+      { property: "og:title", content: "Lançamentos recentes e segurança — Token Guardian IA" },
       { property: "og:description", content: "Origem dos tokens, métricas de mercado e checklist de risco on-chain." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -31,19 +31,19 @@ function Lancamentos() {
   return (
     <Shell status={<span className="font-mono text-muted-foreground">{q.isFetching ? "atualizando…" : "Atualização a cada 60s"}</span>}>
       <div className="mb-6">
-        <div className="label-eyebrow mb-2">Radar de novos ativos</div>
-        <h1 className="text-2xl font-semibold">Pré-lançamentos e tokens recém-listados</h1>
+        <div className="label-eyebrow mb-2">Tokens já lançados</div>
+        <h1 className="text-2xl font-semibold">Lançamentos recentes</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Acompanhe tokens que acabaram de aparecer no radar público. Consulte a origem dos dados e abra o checklist de segurança de cada ativo antes de tirar conclusões.
+          Acompanhe tokens que já possuem pares de negociação detectados publicamente. Consulte a origem dos dados, métricas de mercado e checklist de segurança antes de tirar conclusões.
         </p>
       </div>
 
       <section className="panel mb-6 p-4 sm:p-5">
-        <h2 className="mb-3 text-sm font-semibold text-card-foreground">De onde vêm estes lançamentos?</h2>
+        <h2 className="mb-3 text-sm font-semibold text-card-foreground">Como estes tokens são encontrados?</h2>
         <div className="grid gap-4 text-xs sm:grid-cols-3">
           <div>
             <div className="mb-1 font-medium text-signal">01 · Descoberta</div>
-            <p className="text-muted-foreground">DexScreener — endpoints públicos de perfis de tokens recentes e tokens recém-promovidos. São candidatos descobertos pela plataforma, não uma lista oficial de lançamentos futuros.</p>
+            <p className="text-muted-foreground">DexScreener — feeds públicos de perfis recentes e tokens promovidos. Estes ativos já podem estar negociando; não são pré-lançamentos nem uma lista oficial de lançamentos futuros.</p>
           </div>
           <div>
             <div className="mb-1 font-medium text-signal">02 · Mercado</div>
@@ -66,8 +66,8 @@ function Lancamentos() {
         <button onClick={() => q.refetch()} className="rounded-md px-3 py-1.5 text-xs text-signal ring-1 ring-border">Atualizar</button>
       </div>
 
-      {q.isError && <p className="mb-4 text-sm text-danger">Não foi possível carregar os pré-lançamentos agora. Tente atualizar em instantes.</p>}
-      {q.isPending && <p className="mb-4 text-sm text-muted-foreground">Buscando tokens recentes e indicadores de mercado…</p>}
+      {q.isError && <p className="mb-4 text-sm text-danger">Não foi possível carregar os lançamentos recentes agora. Tente atualizar em instantes.</p>}
+      {q.isPending && <p className="mb-4 text-sm text-muted-foreground">Buscando tokens lançados e indicadores de mercado…</p>}
 
       <div className="panel overflow-x-auto">
         <table className="w-full text-xs">
@@ -118,7 +118,7 @@ function Lancamentos() {
             })}
           </tbody>
         </table>
-        {q.isSuccess && !tokens.length && <p className="p-5 text-xs text-muted-foreground">Nenhum token recente encontrado para esta rede neste momento.</p>}
+        {q.isSuccess && !tokens.length && <p className="p-5 text-xs text-muted-foreground">Nenhum lançamento recente encontrado para esta rede neste momento.</p>}
       </div>
 
       <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
