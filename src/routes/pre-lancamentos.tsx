@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { Shell } from "@/components/shell";
-import { listarPoolsPreLancamento } from "@/lib/pre-lancamentos.functions";
+import { listarPoolsPreLancamento, listarVendasPreLancamento } from "@/lib/pre-lancamentos.functions";
 
 export const Route = createFileRoute("/pre-lancamentos")({
   head: () => ({
@@ -56,7 +56,7 @@ function idade(v: string | null): string {
 }
 
 function PreLancamentos() {
-  const carregar = useServerFn(listarPoolsPreLancamento);
+  const carregar = useServerFn(listarPoolsPreLancamento);\n  const carregarVendas = useServerFn(listarVendasPreLancamento);\n  const consultaVendas = useQuery({\n    queryKey: ["pre-lancamentos", "cryptorank-public-sales"],\n    queryFn: () => carregarVendas(),\n    enabled: categoria === "vendas",\n    refetchInterval: 5 * 60_000,\n    staleTime: 60_000,\n    retry: 1,\n  });
   const consulta = useQuery({
     queryKey: ["pre-lancamentos", "geckoterminal-new-pools"],
     queryFn: () => carregar(),
@@ -178,11 +178,41 @@ function PreLancamentos() {
       )}
 
       {categoria === "vendas" && (
-        <section className="panel max-w-4xl p-5 sm:p-6">
-          <div className="text-xs font-medium text-muted-foreground">ESTÁGIO 3 · ANTES DO TGE</div>
-          <h2 className="mt-2 font-semibold text-card-foreground">ICO, IDO, IEO e presales</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">O calendário de vendas ainda não está conectado. A integração prevista é CryptoRank, após confirmar acesso, endpoint e plano aplicável. Datas e metas só serão exibidas quando vierem de uma fonte verificável.</p>
-          <div className="mt-4 rounded-md border border-border p-3 text-xs text-muted-foreground">Campos planejados: projeto, tipo de venda, status, início/fim, preço, launchpad, meta de captação e fonte original.</div>
+        <section className="max-w-5xl">
+          <div className="panel mb-4 p-5 sm:p-6">
+            <div className="text-xs font-medium text-muted-foreground">ESTÁGIO 3 · ANTES DO TGE</div>
+            <div className="mt-2 flex flex-wrap items-start gap-3">
+              <div className="mr-auto">
+                <h2 className="font-semibold text-card-foreground">ICO, IDO, IEO e presales</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Fonte: CryptoRank · calendário de vendas públicas · atualização a cada 5 minutos.</p>
+              </div>
+              <button onClick={() => consultaVendas.refetch()} className="rounded-md border border-border px-3 py-2 text-xs text-card-foreground">Atualizar agora</button>
+            </div>
+            {consultaVendas.data?.aviso && <p className="mt-4 rounded-md border border-border p-3 text-sm text-muted-foreground">{consultaVendas.data.aviso}</p>}
+            {consultaVendas.isPending && <p className="mt-4 text-sm text-muted-foreground">Consultando o calendário de vendas…</p>}
+            {consultaVendas.isError && <p className="mt-4 text-sm text-danger">Não foi possível carregar o calendário agora.</p>}
+            {consultaVendas.data?.configurado && <p className="mt-3 text-xs text-muted-foreground">Última resposta: {dataHora(consultaVendas.data.atualizadoEm)} · {consultaVendas.data.vendas.length} registros retornados.</p>}
+          </div>
+          <div className="grid gap-3">
+            {(consultaVendas.data?.vendas ?? []).map((v) => (
+              <article key={v.id} className="panel p-4 sm:p-5">
+                <div className="flex flex-wrap items-start gap-3">
+                  <div className="mr-auto min-w-0">
+                    <div className="font-semibold text-card-foreground">{v.projeto}{v.simbolo ? ` (${v.simbolo})` : ""}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{v.tipo ?? "Venda pública"}{v.launchpad ? ` · Launchpad: ${v.launchpad}` : ""}{v.status ? ` · ${v.status}` : ""}</div>
+                  </div>
+                  {v.url && <a href={v.url} target="_blank" rel="noreferrer" className="rounded-md border border-border px-3 py-2 text-xs text-signal underline">Abrir fonte</a>}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Início</div><div className="mt-1 text-sm">{dataHora(v.inicio)}</div></div>
+                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Fim</div><div className="mt-1 text-sm">{dataHora(v.fim)}</div></div>
+                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Preço divulgado</div><div className="mt-1 font-mono text-sm">{v.preco ?? "—"}</div></div>
+                </div>
+              </article>
+            ))}
+          </div>
+          {consultaVendas.data?.configurado && consultaVendas.isSuccess && consultaVendas.data.vendas.length === 0 && !consultaVendas.data.aviso && <p className="panel p-5 text-sm text-muted-foreground">A fonte não retornou vendas futuras para este filtro.</p>}
+          <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">As datas e os preços dependem da cobertura e do plano da fonte. Confirme os detalhes no projeto ou launchpad oficial; a presença no calendário não representa recomendação de investimento.</p>
         </section>
       )}
     </Shell>
