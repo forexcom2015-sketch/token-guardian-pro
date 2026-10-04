@@ -78,10 +78,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Radar.IA — Curso de análise de tokens" },
-      { name: "description", content: "Curso interativo de análise de tokens com IA" },
-      { property: "og:title", content: "Radar.IA" },
-      { property: "og:description", content: "Curso interativo de análise de tokens com IA" },
+      { title: "Token Guardian IA — análise pública de risco cripto" },
+      { name: "description", content: "Análise pública de tokens com dados de mercado, indicadores on-chain e inteligência artificial." },
+      { property: "og:title", content: "Token Guardian IA" },
+      { property: "og:description", content: "Análise pública de tokens e indicadores de risco on-chain." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -101,7 +101,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
