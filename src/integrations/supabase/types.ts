@@ -55,7 +55,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consumir_limite_requisicoes: {
+        Args: {
+          p_chave: string
+          p_limite: number
+          p_janela_segundos: number
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
