@@ -66,8 +66,8 @@ function Radar() {
       <div className="mx-auto max-w-4xl space-y-6">
         {busca.final && (
           <div className="panel p-4 text-sm text-card-foreground">
-            <span className="font-medium text-signal">Análise final do curso.</span> Escolha um token nos{" "}
-            <Link to="/lancamentos" className="text-signal underline">lançamentos ativos</Link> (ou cole um endereço), e compare o checklist com o que você aprendeu em cada módulo.
+            <span className="font-medium text-signal">Análise pública.</span> Escolha um token nos{" "}
+            <Link to="/lancamentos" className="text-signal underline">lançamentos ativos</Link> ou informe o endereço do token para consultar os indicadores disponíveis.
           </div>
         )}
         <div className="panel p-5">
