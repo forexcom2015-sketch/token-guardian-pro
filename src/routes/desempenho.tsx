@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Shell } from "@/components/shell";
-import { SeloRisco } from "@/components/risco";
 import { listarDesempenho, type Rede } from "@/lib/token-ai.functions";
 import { idade, nomesRede, usd } from "@/lib/historico";
 
