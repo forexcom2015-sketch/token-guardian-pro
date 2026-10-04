@@ -16,7 +16,8 @@ function Relogio() {
 
 const navItens = [
   { to: "/painel", rotulo: "Painel" },
-  { to: "/lancamentos", rotulo: "Pré-lançamentos" },
+  { to: "/lancamentos", rotulo: "Lançamentos" },
+  { to: "/pre-lancamentos", rotulo: "Pré-lançamentos" },
   { to: "/desempenho", rotulo: "Top desempenho" },
   { to: "/radar", rotulo: "Radar IA" },
   { to: "/historico", rotulo: "Histórico local" },
