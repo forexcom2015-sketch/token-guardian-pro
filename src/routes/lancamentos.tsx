@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Shell } from "@/components/shell";
 import { SeloRisco } from "@/components/risco";
 import { analisarSegurancaPreLancamento, listarLancamentos, type Rede } from "@/lib/token-ai.functions";
@@ -80,8 +80,8 @@ function Lancamentos() {
               const id = t.rede + ":" + t.endereco;
               const expandido = aberto === id;
               return (
-                <>
-                  <tr key={id} className="hover:bg-secondary/40">
+                <Fragment key={id}>
+                  <tr className="hover:bg-secondary/40">
                     <td className="whitespace-nowrap px-3 py-3"><SeloRisco risco={t.risco} /></td>
                     <td className="px-3 py-3">
                       <div className="flex min-w-[150px] items-center gap-2">
@@ -113,7 +113,7 @@ function Lancamentos() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </tbody>
