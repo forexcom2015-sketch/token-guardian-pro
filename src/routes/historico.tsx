@@ -19,13 +19,13 @@ export const Route = createFileRoute("/historico")({
 });
 
 function Historico() {
-  const { itens, remover, logado } = useHistorico();
+  const { itens, remover } = useHistorico();
   const [aberto, setAberto] = useState<string | null>(null);
   return (
     <Shell status={<span className="font-mono text-muted-foreground">{itens.length} análises</span>}>
       <h1 className="mb-2 text-2xl font-semibold">Histórico</h1>
       <p className="mb-6 text-xs text-muted-foreground">
-        {logado ? "Salvo na sua conta — aparece em qualquer dispositivo." : <>Salvo só neste navegador. <Link to="/auth" className="text-signal underline">Entre na sua conta</Link> para guardar as análises entre sessões.</>}
+        Salvo somente neste navegador. O histórico não exige conta e não é enviado para outros usuários.
       </p>
       {!itens.length && (
         <div className="panel p-6 text-sm text-muted-foreground">
