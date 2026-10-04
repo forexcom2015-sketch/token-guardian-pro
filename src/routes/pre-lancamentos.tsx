@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { Shell } from "@/components/shell";
-import { listarPoolsPreLancamento, listarVendasPreLancamento } from "@/lib/pre-lancamentos.functions";
+import { listarPoolsPreLancamento, listarTokensBondingPreLancamento, listarVendasPreLancamento } from "@/lib/pre-lancamentos.functions";
 
 export const Route = createFileRoute("/pre-lancamentos")({
   head: () => ({
@@ -58,9 +58,18 @@ function idade(v: string | null): string {
 function PreLancamentos() {
   const carregar = useServerFn(listarPoolsPreLancamento);
   const carregarVendas = useServerFn(listarVendasPreLancamento);
+  const carregarBonding = useServerFn(listarTokensBondingPreLancamento);
   const [categoria, setCategoria] = useState<Categoria>("pools");
   const [rede, setRede] = useState("todas");
   const [minLiquidez, setMinLiquidez] = useState("0");
+  const consultaBonding = useQuery({
+    queryKey: ["pre-lancamentos", "moralis-pumpfun-bonding"],
+    queryFn: () => carregarBonding(),
+    enabled: categoria === "bonding",
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+    retry: 1,
+  });
   const consultaVendas = useQuery({
     queryKey: ["pre-lancamentos", "cryptorank-public-sales"],
     queryFn: () => carregarVendas(),
@@ -178,11 +187,43 @@ function PreLancamentos() {
       )}
 
       {categoria === "bonding" && (
-        <section className="panel max-w-4xl p-5 sm:p-6">
-          <div className="text-xs font-medium text-muted-foreground">ESTÁGIO 2 · ANTES DA POOL</div>
-          <h2 className="mt-2 font-semibold text-card-foreground">Tokens em curva de bonding</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Este feed ainda não está conectado. Para identificar tokens antes da criação da pool, a próxima integração será uma fonte própria de launchpads, como Solana Tracker ou Moralis para Solana. Essa categoria não será preenchida com pools já negociáveis.</p>
-          <div className="mt-4 rounded-md border border-border p-3 text-xs text-muted-foreground">Campos planejados: launchpad, endereço do token, progresso da curva, capitalização estimada, eventos de graduação, rede e link da fonte.</div>
+        <section className="max-w-5xl">
+          <div className="panel mb-4 p-5 sm:p-6">
+            <div className="text-xs font-medium text-muted-foreground">ESTÁGIO 2 · ANTES DA GRADUAÇÃO</div>
+            <div className="mt-2 flex flex-wrap items-start gap-3">
+              <div className="mr-auto">
+                <h2 className="font-semibold text-card-foreground">Tokens em curva de bonding</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Fonte: Moralis · Pump.fun · atualização a cada 30 segundos.</p>
+              </div>
+              <button onClick={() => consultaBonding.refetch()} className="rounded-md border border-border px-3 py-2 text-xs text-card-foreground">Atualizar agora</button>
+            </div>
+            {consultaBonding.data?.aviso && <p className="mt-4 rounded-md border border-border p-3 text-sm text-muted-foreground">{consultaBonding.data.aviso}</p>}
+            {consultaBonding.isPending && <p className="mt-4 text-sm text-muted-foreground">Consultando tokens em curva de bonding…</p>}
+            {consultaBonding.isError && <p className="mt-4 text-sm text-danger">Não foi possível carregar os tokens em bonding.</p>}
+            {consultaBonding.data?.configurado && <p className="mt-3 text-xs text-muted-foreground">Última resposta: {dataHora(consultaBonding.data.atualizadoEm)} · {consultaBonding.data.tokens.length} registros retornados.</p>}
+          </div>
+          <div className="grid gap-3">
+            {(consultaBonding.data?.tokens ?? []).map((t) => (
+              <article key={t.address} className="panel p-4 sm:p-5">
+                <div className="flex flex-wrap items-start gap-3">
+                  <div className="mr-auto min-w-0">
+                    <div className="font-semibold text-card-foreground">{t.nome}{t.simbolo ? ` (${t.simbolo})` : ""}</div>
+                    <div className="mt-1 break-all text-xs text-muted-foreground">{t.address}</div>
+                  </div>
+                  <a href={t.url} target="_blank" rel="noreferrer" className="rounded-md border border-border px-3 py-2 text-xs text-signal underline">Abrir Pump.fun</a>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Capitalização</div><div className="mt-1 font-mono text-sm">{moeda(t.marketCapUsd)}</div></div>
+                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Liquidez</div><div className="mt-1 font-mono text-sm">{moeda(t.liquidezUsd)}</div></div>
+                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Preço USD</div><div className="mt-1 font-mono text-sm">{moeda(t.precoUsd)}</div></div>
+                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Volume 24h</div><div className="mt-1 font-mono text-sm">{moeda(t.volume24hUsd)}</div></div>
+                </div>
+                {t.progressoCurva !== null && <div className="mt-4"><div className="mb-1 flex justify-between text-xs text-muted-foreground"><span>Progresso da curva</span><span>{t.progressoCurva.toFixed(1)}%</span></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{ width: `${t.progressoCurva}%` }} /></div></div>}
+              </article>
+            ))}
+          </div>
+          {consultaBonding.data?.configurado && consultaBonding.isSuccess && consultaBonding.data.tokens.length === 0 && !consultaBonding.data.aviso && <p className="panel p-5 text-sm text-muted-foreground">A fonte não retornou tokens nesta consulta.</p>}
+          <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">Este feed é específico da curva Pump.fun na Solana. Tokens graduados podem deixar de aparecer nesta categoria. Dados de mercado não comprovam legitimidade nem segurança do contrato.</p>
         </section>
       )}
 
