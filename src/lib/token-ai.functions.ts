@@ -127,3 +127,17 @@ export const listarLancamentos = createServerFn({ method: "GET" }).handler(async
   const redes: Rede[] = ["solana", "bsc", "ethereum", "base"];
   return { tokens: await lancamentosRecentes(redes), atualizadoEm: new Date().toISOString() };
 });
+
+
+/** Checklist de segurança sob demanda, sem chamada à IA nem consumo de créditos de IA. */
+export const analisarSegurancaPreLancamento = createServerFn({ method: "GET" })
+  .inputValidator((data: unknown) =>
+    z.object({ rede: redeSchema, endereco: z.string().trim().min(20).max(80) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { coletarDados, notaRisco } = await import("./onchain.server");
+    const dados = await coletarDados(data.rede, data.endereco);
+    if (!dados.fontes.length) throw new Error("Não foi possível obter dados de mercado ou segurança para este token.");
+    const risco = notaRisco(dados.checagens, !dados.fontes.includes("GoPlus Security"));
+    return { dados, risco, geradoEm: new Date().toISOString() };
+  });
