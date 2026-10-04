@@ -153,7 +153,7 @@ export const listarLancamentos = createServerFn({ method: "GET" }).handler(async
 /** Checklist de segurança sob demanda, sem chamada à IA nem consumo de créditos de IA. */
 export const analisarSegurancaPreLancamento = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) =>
-    z.object({ rede: redeSchema, endereco: z.string().trim().min(20).max(80) }).parse(data),
+    entradaTokenSchema.parse(data),
   )
   .handler(async ({ data }) => {
     const { coletarDados, notaRisco } = await import("./onchain.server");
