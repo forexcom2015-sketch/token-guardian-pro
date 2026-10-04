@@ -141,3 +141,9 @@ export const analisarSegurancaPreLancamento = createServerFn({ method: "GET" })
     const risco = notaRisco(dados.checagens, !dados.fontes.includes("GoPlus Security"));
     return { dados, risco, geradoEm: new Date().toISOString() };
   });
+
+
+export const listarDesempenho = createServerFn({ method: "GET" }).handler(async () => {
+  const { rankingDesempenho } = await import("./onchain.server");
+  return rankingDesempenho();
+});
