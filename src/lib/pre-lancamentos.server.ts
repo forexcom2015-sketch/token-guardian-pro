@@ -231,3 +231,131 @@ export async function listarVendasPublicas(): Promise<{
     return { vendas: cacheVendas?.vendas ?? [], atualizadoEm: cacheVendas ? new Date(cacheVendas.em).toISOString() : new Date().toISOString(), fonte: "CryptoRank", configurado: true, aviso: "Não foi possível conectar à CryptoRank agora." };
   }
 }
+
+
+export type TokenBonding = {
+  address: string;
+  nome: string;
+  simbolo: string | null;
+  marketCapUsd: number | null;
+  liquidezUsd: number | null;
+  precoUsd: number | null;
+  volume24hUsd: number | null;
+  progressoCurva: number | null;
+  criadoEm: string | null;
+  url: string;
+};
+
+type JsonObject = Record<string, unknown>;
+let cacheBonding: { em: number; tokens: TokenBonding[] } | null = null;
+const TTL_BONDING = 30_000;
+
+function objeto(v: unknown): JsonObject | null {
+  return v !== null && typeof v === "object" && !Array.isArray(v) ? v as JsonObject : null;
+}
+function campoTexto(obj: JsonObject, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "string" || typeof value === "number") {
+      const result = String(value).trim();
+      if (result) return result;
+    }
+  }
+  return null;
+}
+function campoNumero(obj: JsonObject, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim() !== "") {
+      const result = Number(value);
+      if (Number.isFinite(result)) return result;
+    }
+  }
+  return null;
+}
+function listaBonding(payload: unknown): JsonObject[] {
+  if (Array.isArray(payload)) return payload.map(objeto).filter((v): v is JsonObject => v !== null);
+  const root = objeto(payload);
+  if (!root) return [];
+  for (const key of ["result", "data", "tokens", "items", "pairs"]) {
+    const list = root[key];
+    if (Array.isArray(list)) return list.map(objeto).filter((v): v is JsonObject => v !== null);
+    const nested = objeto(list);
+    if (nested) {
+      for (const nestedKey of ["result", "data", "tokens", "items"]) {
+        if (Array.isArray(nested[nestedKey])) {
+          return (nested[nestedKey] as unknown[]).map(objeto).filter((v): v is JsonObject => v !== null);
+        }
+      }
+    }
+  }
+  return [];
+}
+
+/** Feed de tokens Pump.fun que continuam na curva de bonding (não graduados). */
+export async function listarTokensBonding(): Promise<{
+  tokens: TokenBonding[];
+  atualizadoEm: string;
+  fonte: string;
+  configurado: boolean;
+  aviso: string | null;
+}> {
+  const apiKey = process.env["MORALIS_API_KEY"];
+  if (!apiKey) {
+    return {
+      tokens: cacheBonding?.tokens ?? [],
+      atualizadoEm: cacheBonding ? new Date(cacheBonding.em).toISOString() : new Date().toISOString(),
+      fonte: "Moralis · Pump.fun",
+      configurado: false,
+      aviso: "Integração não configurada: adicione MORALIS_API_KEY como segredo do servidor/Cloudflare para habilitar tokens em bonding.",
+    };
+  }
+  if (cacheBonding && Date.now() - cacheBonding.em < TTL_BONDING) {
+    return { tokens: cacheBonding.tokens, atualizadoEm: new Date(cacheBonding.em).toISOString(), fonte: "Moralis · Pump.fun", configurado: true, aviso: null };
+  }
+
+  try {
+    const response = await fetch("https://solana-gateway.moralis.io/token/mainnet/exchange/pumpfun/bonding", {
+      headers: { accept: "application/json", "X-API-Key": apiKey },
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!response.ok) {
+      const aviso = response.status === 401 || response.status === 403
+        ? "A Moralis recusou a chave ou o plano não permite consultar tokens em bonding."
+        : response.status === 429
+          ? "Limite de requisições Moralis atingido. Tente novamente mais tarde."
+          : `A Moralis respondeu com status ${response.status}.`;
+      return { tokens: cacheBonding?.tokens ?? [], atualizadoEm: cacheBonding ? new Date(cacheBonding.em).toISOString() : new Date().toISOString(), fonte: "Moralis · Pump.fun", configurado: true, aviso };
+    }
+
+    const payload: unknown = await response.json();
+    const tokens = listaBonding(payload).map((item): TokenBonding | null => {
+      const token = objeto(item.token) ?? objeto(item.baseToken) ?? item;
+      const address = campoTexto(token, ["mint", "address", "tokenAddress", "token_address"]);
+      if (!address) return null;
+      const bonding = objeto(item.bondingCurve) ?? objeto(item.bonding_curve) ?? objeto(item.curve) ?? {};
+      const progress = campoNumero(item, ["bondingCurveProgress", "bonding_curve_progress", "curveProgress", "progress"]) ??
+        campoNumero(bonding, ["progress", "percentage", "completion"]);
+      const curvePct = progress !== null ? (progress >= 0 && progress <= 1 ? progress * 100 : progress) : null;
+      const name = campoTexto(token, ["name", "tokenName", "token_name"]) ?? "Token sem nome";
+      return {
+        address,
+        nome: name,
+        simbolo: campoTexto(token, ["symbol", "ticker"]),
+        marketCapUsd: campoNumero(item, ["marketCap", "market_cap", "marketCapUsd", "fdv"]) ?? campoNumero(token, ["marketCap", "market_cap"]),
+        liquidezUsd: campoNumero(item, ["liquidity", "liquidityUsd", "liquidity_usd"]),
+        precoUsd: campoNumero(item, ["priceUsd", "price_usd", "usdPrice"]) ?? campoNumero(token, ["priceUsd", "price_usd"]),
+        volume24hUsd: campoNumero(item, ["volume24h", "volume_24h", "volume24hUsd"]) ?? campoNumero(objeto(item.volume) ?? {}, ["h24", "24h"]),
+        progressoCurva: curvePct !== null && curvePct >= 0 && curvePct <= 100 ? curvePct : null,
+        criadoEm: campoTexto(item, ["createdAt", "created_at", "createdTimestamp"]),
+        url: `https://pump.fun/coin/${encodeURIComponent(address)}`,
+      };
+    }).filter((v): v is TokenBonding => v !== null);
+
+    cacheBonding = { em: Date.now(), tokens };
+    return { tokens, atualizadoEm: new Date().toISOString(), fonte: "Moralis · Pump.fun", configurado: true, aviso: null };
+  } catch {
+    return { tokens: cacheBonding?.tokens ?? [], atualizadoEm: cacheBonding ? new Date(cacheBonding.em).toISOString() : new Date().toISOString(), fonte: "Moralis · Pump.fun", configurado: true, aviso: "Não foi possível conectar à Moralis agora." };
+  }
+}
