@@ -1,5 +1,28 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
+
+/** Persistent, atomic limits stored in Postgres; never falls back to process memory. */
+async function limitarUso(acao: "analise-ia" | "checklist-seguranca", limite: number, janelaSegundos: number) {
+  const request = getRequest();
+  // Cloudflare sets this header at the edge. Do not trust arbitrary forwarded-IP headers.
+  const ip = request?.headers.get("cf-connecting-ip")?.trim();
+  const origem = ip && ip.length <= 64 ? ip : "origem-nao-identificada";
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${acao}:${origem}`));
+  const chave = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin.rpc("consumir_limite_requisicoes", {
+    p_chave: chave,
+    p_limite: limite,
+    p_janela_segundos: janelaSegundos,
+  });
+  if (error || typeof data !== "boolean") {
+    console.error("[RateLimit] Não foi possível verificar o limite de requisições.", error?.message);
+    throw new Error("Serviço temporariamente indisponível para proteger os recursos. Tente novamente.");
+  }
+  if (!data) throw new Error("Limite de consultas atingido. Aguarde antes de tentar novamente.");
+}
+
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";
 const MODEL = "openai/gpt-6-astra";
@@ -123,6 +146,7 @@ export const analisarReal = createServerFn({ method: "POST" })
     entradaTokenSchema.parse(data),
   )
   .handler(async ({ data }): Promise<AnaliseReal> => {
+    await limitarUso("analise-ia", 10, 60 * 60);
     const { coletarDados } = await import("./onchain.server");
     const dados = await coletarDados(data.rede, data.endereco);
     if (!dados.fontes.length) throw new Error("Token não encontrado no DexScreener nem no GoPlus para essa rede.");
@@ -156,6 +180,7 @@ export const analisarSegurancaPreLancamento = createServerFn({ method: "GET" })
     entradaTokenSchema.parse(data),
   )
   .handler(async ({ data }) => {
+    await limitarUso("checklist-seguranca", 30, 10 * 60);
     const { coletarDados, notaRisco } = await import("./onchain.server");
     const dados = await coletarDados(data.rede, data.endereco);
     if (!dados.fontes.length) throw new Error("Não foi possível obter dados de mercado ou segurança para este token.");
