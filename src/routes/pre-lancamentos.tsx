@@ -56,7 +56,19 @@ function idade(v: string | null): string {
 }
 
 function PreLancamentos() {
-  const carregar = useServerFn(listarPoolsPreLancamento);\n  const carregarVendas = useServerFn(listarVendasPreLancamento);\n  const consultaVendas = useQuery({\n    queryKey: ["pre-lancamentos", "cryptorank-public-sales"],\n    queryFn: () => carregarVendas(),\n    enabled: categoria === "vendas",\n    refetchInterval: 5 * 60_000,\n    staleTime: 60_000,\n    retry: 1,\n  });
+  const carregar = useServerFn(listarPoolsPreLancamento);
+  const carregarVendas = useServerFn(listarVendasPreLancamento);
+  const [categoria, setCategoria] = useState<Categoria>("pools");
+  const [rede, setRede] = useState("todas");
+  const [minLiquidez, setMinLiquidez] = useState("0");
+  const consultaVendas = useQuery({
+    queryKey: ["pre-lancamentos", "cryptorank-public-sales"],
+    queryFn: () => carregarVendas(),
+    enabled: categoria === "vendas",
+    refetchInterval: 5 * 60_000,
+    staleTime: 60_000,
+    retry: 1,
+  });
   const consulta = useQuery({
     queryKey: ["pre-lancamentos", "geckoterminal-new-pools"],
     queryFn: () => carregar(),
@@ -64,9 +76,6 @@ function PreLancamentos() {
     staleTime: 30_000,
     retry: 1,
   });
-  const [categoria, setCategoria] = useState<Categoria>("pools");
-  const [rede, setRede] = useState("todas");
-  const [minLiquidez, setMinLiquidez] = useState("0");
   const pools = consulta.data?.pools ?? [];
   const filtradas = useMemo(() => pools.filter((p) =>
     (rede === "todas" || p.rede === rede) &&
