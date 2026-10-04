@@ -5,13 +5,13 @@ Aplicação pública para análise de risco de tokens cripto. O visitante pode a
 ## Funcionalidades
 
 - **Radar IA:** análise de token por rede e endereço, com checklist de risco e parecer assistido por IA.
-- **Lançamentos ativos:** consulta de tokens recentes e métricas de mercado.
+- **Pré-lançamentos:** descoberta via perfis e tokens recém-promovidos do DexScreener, com métricas de mercado e checklist de segurança sob demanda. Tokens listados podem já estar negociando; não é uma lista oficial de lançamentos futuros.
 - **Painel de risco:** visualização comparativa de indicadores e alertas.
 - **Histórico local:** as análises são guardadas no navegador do usuário; não é necessário criar conta.
 
 ## Fontes de dados
 
-O projeto integra serviços externos de dados de mercado e segurança on-chain, incluindo DexScreener e GoPlus, além de consultas específicas à blockchain quando disponíveis. Os resultados dependem da disponibilidade e qualidade das fontes.
+O projeto integra serviços externos de dados de mercado e segurança on-chain, incluindo endpoints públicos do DexScreener para descoberta e mercado, GoPlus Security para indicadores de contrato e consultas específicas à blockchain Solana quando disponíveis. A página de pré-lançamentos explica a origem dos dados e permite abrir o checklist por token sem chamar a IA. Os resultados dependem da disponibilidade e qualidade das fontes.
 
 ## Aviso de risco
 
