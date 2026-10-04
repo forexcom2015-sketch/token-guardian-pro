@@ -29,7 +29,8 @@ function Inicio() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/radar" className="rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground">Analisar um token</Link>
-            <Link to="/lancamentos" className="rounded-md border border-border px-5 py-3 text-sm text-card-foreground">Explorar pré-lançamentos</Link>
+            <Link to="/lancamentos" className="rounded-md border border-border px-5 py-3 text-sm text-card-foreground">Ver lançamentos</Link>
+            <Link to="/pre-lancamentos" className="rounded-md border border-border px-5 py-3 text-sm text-card-foreground">Pré-lançamentos</Link>
             <Link to="/desempenho" className="rounded-md border border-border px-5 py-3 text-sm text-card-foreground">Top desempenho</Link>
             <Link to="/painel" className="rounded-md border border-border px-5 py-3 text-sm text-card-foreground">Ver painel de risco</Link>
           </div>
