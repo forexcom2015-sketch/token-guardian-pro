@@ -12,3 +12,10 @@ export const listarVendasPreLancamento = createServerFn({ method: "GET" }).handl
   const { listarVendasPublicas } = await import("./pre-lancamentos.server");
   return listarVendasPublicas();
 });
+
+
+/** Endpoint exclusivo da aba Curva de bonding em Pré-lançamentos. */
+export const listarTokensBondingPreLancamento = createServerFn({ method: "GET" }).handler(async () => {
+  const { listarTokensBonding } = await import("./pre-lancamentos.server");
+  return listarTokensBonding();
+});
