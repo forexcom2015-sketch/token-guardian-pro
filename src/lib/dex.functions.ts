@@ -16,15 +16,17 @@ const TTL_MS = 5_000;
 const VELHA_MS = 5 * 60_000;
 let cache: { em: number; v: Cotacoes } | null = null;
 
-const preco = (v: unknown): number | null =>
-  typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null;
+const preco = (v: unknown): number | null => {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
 
-/** Cotações públicas em R$ (CoinGecko); null por ativo quando indisponível. */
+/** Cotações públicas em R$; USDT prioriza Binance e demais ativos usam CoinGecko. */
 export const cotacoesBrl = createServerFn({ method: "GET" }).handler(
   async (): Promise<Cotacoes> => {
     if (cache && Date.now() - cache.em < TTL_MS) return cache.v;
     try {
-      const [binanceRes, geckoRes] = await Promise.all([
+      const [binanceResult, geckoResult] = await Promise.allSettled([
         fetch("https://api.binance.com/api/v3/ticker/price?symbol=USDTBRL", {
           headers: { accept: "application/json" },
           signal: AbortSignal.timeout(5_000),
@@ -34,10 +36,17 @@ export const cotacoesBrl = createServerFn({ method: "GET" }).handler(
           signal: AbortSignal.timeout(5_000),
         }),
       ]);
-      if (!binanceRes.ok && !geckoRes.ok) throw new Error("fontes de cotação indisponíveis");
 
-      const binance = binanceRes.ok ? ((await binanceRes.json()) as { price?: unknown }) : null;
-      const gecko = geckoRes.ok ? ((await geckoRes.json()) as Record<string, { brl?: unknown }>) : {};
+      const binanceRes = binanceResult.status === "fulfilled" ? binanceResult.value : null;
+      const geckoRes = geckoResult.status === "fulfilled" ? geckoResult.value : null;
+      if (!binanceRes?.ok && !geckoRes?.ok) throw new Error("fontes de cotação indisponíveis");
+
+      const binance = binanceRes?.ok
+        ? ((await binanceRes.json()) as { price?: unknown })
+        : null;
+      const gecko = geckoRes?.ok
+        ? ((await geckoRes.json()) as Record<string, { brl?: unknown }>)
+        : {};
 
       const precos = Object.fromEntries(
         (Object.keys(IDS) as Ativo[]).map((a) => [
