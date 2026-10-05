@@ -60,7 +60,7 @@ const usdt = (c: number) =>
 
 function Dex() {
   const fn = useServerFn(cotacoesBrl);
-  const q = useQuery({ queryKey: ["cotacoes-brl"], queryFn: () => fn(), refetchInterval: 60_000 });
+  const q = useQuery({ queryKey: ["cotacoes-brl"], queryFn: () => fn(), refetchInterval: 5_000 });
   const [conta, setConta] = useState<string | null>(null);
   const [chain, setChain] = useState<string | null>(null);
   const [temMM, setTemMM] = useState(false);
@@ -127,7 +127,7 @@ function Dex() {
     <Shell
       status={
         <span className="font-mono text-muted-foreground">
-          {q.isFetching ? "cotando…" : "Cotação atualizada a cada 60s"}
+          {q.isFetching ? "cotando…" : "Cotação em tempo real • atualização ~5s"}
         </span>
       }
     >
@@ -169,7 +169,7 @@ function Dex() {
           <div className="rounded-md border border-border bg-background p-4">
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Cotação (1 USDT)</dt>
+                <dt className="text-muted-foreground">Cotação ao vivo (1 USDT)</dt>
                 <dd className="font-mono">
                   {precoUsdt ? brl(precoUsdt) : q.isError ? "indisponível" : "…"}
                 </dd>
@@ -272,7 +272,7 @@ function Dex() {
             </ul>
             <p className="text-[11px] text-muted-foreground">
               Aqui você compra apenas USDT. Depois, na sua carteira, use a função de troca (Swap)
-              para converter o USDT em qualquer outra cripto. Fonte das cotações: CoinGecko.
+              para converter o USDT em qualquer outra cripto. USDT/BRL: Binance (tempo real). Demais ativos: CoinGecko.
             </p>
           </div>
 
