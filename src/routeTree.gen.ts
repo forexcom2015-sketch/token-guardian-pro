@@ -10,22 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DesempenhoRouteImport } from './routes/desempenho'
 import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as LancamentosRouteImport } from './routes/lancamentos'
-import { Route as ModulosRouteImport } from './routes/modulos'
 import { Route as PainelRouteImport } from './routes/painel'
+import { Route as PreLancamentosRouteImport } from './routes/pre-lancamentos'
 import { Route as RadarRouteImport } from './routes/radar'
-import { Route as ModuloIdRouteImport } from './routes/modulo.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const DesempenhoRoute = DesempenhoRouteImport.update({
+  id: '/desempenho',
+  path: '/desempenho',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoricoRoute = HistoricoRouteImport.update({
@@ -38,14 +37,14 @@ const LancamentosRoute = LancamentosRouteImport.update({
   path: '/lancamentos',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ModulosRoute = ModulosRouteImport.update({
-  id: '/modulos',
-  path: '/modulos',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PainelRoute = PainelRouteImport.update({
   id: '/painel',
   path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreLancamentosRoute = PreLancamentosRouteImport.update({
+  id: '/pre-lancamentos',
+  path: '/pre-lancamentos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RadarRoute = RadarRouteImport.update({
@@ -53,85 +52,73 @@ const RadarRoute = RadarRouteImport.update({
   path: '/radar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ModuloIdRoute = ModuloIdRouteImport.update({
-  id: '/modulo/$id',
-  path: '/modulo/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
+  '/desempenho': typeof DesempenhoRoute
   '/historico': typeof HistoricoRoute
   '/lancamentos': typeof LancamentosRoute
-  '/modulos': typeof ModulosRoute
   '/painel': typeof PainelRoute
+  '/pre-lancamentos': typeof PreLancamentosRoute
   '/radar': typeof RadarRoute
-  '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
+  '/desempenho': typeof DesempenhoRoute
   '/historico': typeof HistoricoRoute
   '/lancamentos': typeof LancamentosRoute
-  '/modulos': typeof ModulosRoute
   '/painel': typeof PainelRoute
+  '/pre-lancamentos': typeof PreLancamentosRoute
   '/radar': typeof RadarRoute
-  '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
+  '/desempenho': typeof DesempenhoRoute
   '/historico': typeof HistoricoRoute
   '/lancamentos': typeof LancamentosRoute
-  '/modulos': typeof ModulosRoute
   '/painel': typeof PainelRoute
+  '/pre-lancamentos': typeof PreLancamentosRoute
   '/radar': typeof RadarRoute
-  '/modulo/$id': typeof ModuloIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/auth'
+    | '/desempenho'
     | '/historico'
     | '/lancamentos'
-    | '/modulos'
     | '/painel'
+    | '/pre-lancamentos'
     | '/radar'
-    | '/modulo/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/auth'
+    | '/desempenho'
     | '/historico'
     | '/lancamentos'
-    | '/modulos'
     | '/painel'
+    | '/pre-lancamentos'
     | '/radar'
-    | '/modulo/$id'
   id:
     | '__root__'
     | '/'
-    | '/auth'
+    | '/desempenho'
     | '/historico'
     | '/lancamentos'
-    | '/modulos'
     | '/painel'
+    | '/pre-lancamentos'
     | '/radar'
-    | '/modulo/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthRoute: typeof AuthRoute
+  DesempenhoRoute: typeof DesempenhoRoute
   HistoricoRoute: typeof HistoricoRoute
   LancamentosRoute: typeof LancamentosRoute
-  ModulosRoute: typeof ModulosRoute
   PainelRoute: typeof PainelRoute
+  PreLancamentosRoute: typeof PreLancamentosRoute
   RadarRoute: typeof RadarRoute
-  ModuloIdRoute: typeof ModuloIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -143,11 +130,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/desempenho': {
+      id: '/desempenho'
+      path: '/desempenho'
+      fullPath: '/desempenho'
+      preLoaderRoute: typeof DesempenhoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/historico': {
@@ -164,18 +151,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LancamentosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/modulos': {
-      id: '/modulos'
-      path: '/modulos'
-      fullPath: '/modulos'
-      preLoaderRoute: typeof ModulosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/painel': {
       id: '/painel'
       path: '/painel'
       fullPath: '/painel'
       preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pre-lancamentos': {
+      id: '/pre-lancamentos'
+      path: '/pre-lancamentos'
+      fullPath: '/pre-lancamentos'
+      preLoaderRoute: typeof PreLancamentosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/radar': {
@@ -185,25 +172,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RadarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/modulo/$id': {
-      id: '/modulo/$id'
-      path: '/modulo/$id'
-      fullPath: '/modulo/$id'
-      preLoaderRoute: typeof ModuloIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthRoute: AuthRoute,
+  DesempenhoRoute: DesempenhoRoute,
   HistoricoRoute: HistoricoRoute,
   LancamentosRoute: LancamentosRoute,
-  ModulosRoute: ModulosRoute,
   PainelRoute: PainelRoute,
+  PreLancamentosRoute: PreLancamentosRoute,
   RadarRoute: RadarRoute,
-  ModuloIdRoute: ModuloIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

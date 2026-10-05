@@ -50,17 +50,53 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_buckets: {
+        Row: {
+          hits: number
+          key_hash: string
+          window_started_at: string
+        }
+        Insert: {
+          hits: number
+          key_hash: string
+          window_started_at: string
+        }
+        Update: {
+          hits?: number
+          key_hash?: string
+          window_started_at?: string
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          chave: string
+          contagem: number
+          janela: string
+        }
+        Insert: {
+          chave: string
+          contagem?: number
+          janela: string
+        }
+        Update: {
+          chave?: string
+          contagem?: number
+          janela?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      check_rate_limit: {
+        Args: { p_chave: string; p_janela_seg: number; p_max: number }
+        Returns: boolean
+      }
       consumir_limite_requisicoes: {
-        Args: {
-          p_chave: string
-          p_limite: number
-          p_janela_segundos: number
-        }
+        Args: { p_chave: string; p_janela_segundos: number; p_limite: number }
         Returns: boolean
       }
     }
