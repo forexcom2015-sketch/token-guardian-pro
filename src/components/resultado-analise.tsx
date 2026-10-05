@@ -5,7 +5,7 @@ import { idade, linksToken, nomesRede, usd } from "@/lib/historico";
 const rotuloNivel: Record<string, string> = { baixo: "Risco baixo", medio: "Risco médio", alto: "Risco alto", desconhecido: "Sem dados" };
 
 export function ResultadoAnalise({ analise }: { analise: AnaliseReal }) {
-  const { dados, parecer } = analise;
+  const { dados, risco, parecer } = analise;
   const m = dados.mercado;
   const categorias = [...new Set(dados.checagens.map((c) => c.categoria))];
   const altos = dados.checagens.filter((c) => c.nivel === "alto").length;
@@ -25,14 +25,16 @@ export function ResultadoAnalise({ analise }: { analise: AnaliseReal }) {
               ))}
             </div>
           </div>
-          {parecer && (
-            <div className="text-right">
-              <div className="font-mono text-3xl text-card-foreground">{parecer.score}</div>
-              <div className="mt-1 flex items-center justify-end gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <NivelPonto nivel={parecer.nivelGeral} /> {rotuloNivel[parecer.nivelGeral]}
-              </div>
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Score oficial de risco</div>
+            <div className="font-mono text-3xl text-card-foreground">{risco.nota}</div>
+            <div className="mt-1 flex items-center justify-end gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <NivelPonto nivel={risco.nivel} /> {rotuloNivel[risco.nivel]}
             </div>
-          )}
+            <div className="mt-1 text-[10px] text-muted-foreground">
+              Cobertura: {risco.cobertura === "completa" ? "completa" : risco.cobertura === "parcial" ? "parcial" : "insuficiente"}
+            </div>
+          </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-5">
           {[
@@ -52,7 +54,7 @@ export function ResultadoAnalise({ analise }: { analise: AnaliseReal }) {
 
       {parecer ? (
         <div className="panel p-5">
-          <div className="label-eyebrow mb-2">Parecer da IA</div>
+          <div className="label-eyebrow mb-2">Interpretação da IA</div>
           <p className="text-sm text-card-foreground">{parecer.resumo}</p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <Lista titulo="Pontos de atenção" itens={parecer.pontosAtencao} />
@@ -64,9 +66,12 @@ export function ResultadoAnalise({ analise }: { analise: AnaliseReal }) {
       )}
 
       <div className="panel p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="label-eyebrow">Checklist com dados reais</div>
-          <span className="text-xs text-muted-foreground">{altos} alerta(s) de risco alto</span>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <div className="label-eyebrow">Checklist com dados reais</div>
+            <div className="mt-1 text-[10px] text-muted-foreground">Score determinístico: maior = mais arriscado · {risco.desconhecidos} item(ns) sem evidência suficiente</div>
+          </div>
+          <span className="shrink-0 text-xs text-muted-foreground">{altos} alerta(s) de risco alto</span>
         </div>
         {categorias.map((cat) => (
           <div key={cat} className="mb-4">
@@ -83,7 +88,7 @@ export function ResultadoAnalise({ analise }: { analise: AnaliseReal }) {
             </div>
           </div>
         ))}
-        <p className="text-[11px] text-muted-foreground">Sinais externos como redes sociais e selos de auditoria precisam de checagem manual. Conteúdo educacional, não é recomendação de investimento.</p>
+        <p className="text-[11px] text-muted-foreground">Sinais externos como redes sociais e selos de auditoria precisam de checagem manual. Ausência de dados é tratada como desconhecida, não como segurança. Conteúdo educacional, não é recomendação de investimento.</p>
       </div>
     </div>
   );
