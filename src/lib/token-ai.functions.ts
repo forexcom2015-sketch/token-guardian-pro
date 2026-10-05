@@ -23,7 +23,6 @@ async function limitarUso(acao: "analise-ia" | "checklist-seguranca", limite: nu
   if (!data) throw new Error("Limite de consultas atingido. Aguarde antes de tentar novamente.");
 }
 
-
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";
 const MODEL = "openai/gpt-6-astra";
 
@@ -98,30 +97,8 @@ function extrairJson<T>(texto: string): T {
 }
 
 import type { DadosToken, NotaRisco, Rede } from "./onchain.server";
+import { entradaTokenSchema } from "./enderecos";
 export type { DadosToken, Rede } from "./onchain.server";
-
-const redeSchema = z.enum(["solana", "bsc", "ethereum", "base"]);
-
-const enderecoSchema = z.string().trim().superRefine((endereco, ctx) => {
-  // Validate by chain before using the address in upstream API query parameters.
-  // EVM contract addresses are 20-byte hex; Solana mint addresses use base58.
-  const evm = /^0x[a-fA-F0-9]{40}$/;
-  const solana = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-  // The network is validated in the containing object; accept either address
-  // shape here, then enforce the correct one with the object-level refinement.
-  if (!evm.test(endereco) && !solana.test(endereco)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Endereço de token inválido." });
-  }
-});
-
-const entradaTokenSchema = z.object({ rede: redeSchema, endereco: enderecoSchema }).superRefine((data, ctx) => {
-  const valido = data.rede === "solana"
-    ? /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(data.endereco)
-    : /^0x[a-fA-F0-9]{40}$/.test(data.endereco);
-  if (!valido) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endereco"], message: "O endereço não corresponde à rede selecionada." });
-  }
-});
 
 export type ParecerIA = {
   resumo: string;
@@ -171,7 +148,6 @@ export const listarLancamentos = createServerFn({ method: "GET" }).handler(async
   return { tokens: await lancamentosRecentes(redes), atualizadoEm: new Date().toISOString() };
 });
 
-
 /** Checklist de segurança sob demanda, sem chamada à IA nem consumo de créditos de IA. */
 export const analisarSegurancaPreLancamento = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) =>
@@ -181,11 +157,10 @@ export const analisarSegurancaPreLancamento = createServerFn({ method: "GET" })
     await limitarUso("checklist-seguranca", 30, 10 * 60);
     const { coletarDados, notaRisco } = await import("./onchain.server");
     const dados = await coletarDados(data.rede, data.endereco);
-    if (!dados.fontes.length) throw new Error("Não foi possível obter dados de mercado ou segurança para este token.");
+    if (!dados.fontes.length) throw new Error("Não foi possível obter dados de mercado ou segurança para esse token.");
     const risco = notaRisco(dados.checagens, !dados.fontes.some((f) => f === "GoPlus Security" || f === "Solana RPC"));
     return { dados, risco, geradoEm: new Date().toISOString() };
   });
-
 
 export const listarDesempenho = createServerFn({ method: "GET" }).handler(async () => {
   const { rankingDesempenho } = await import("./onchain.server");
