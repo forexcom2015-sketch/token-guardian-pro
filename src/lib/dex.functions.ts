@@ -10,8 +10,8 @@ const IDS: Record<Ativo, string> = {
 
 type Cotacoes = { precos: Record<Ativo, number | null>; atualizadoEm: string };
 
-// Cache curto no servidor: a cotação do USDT/BRL vem da Binance e é atualizada a cada 5s.
-// Se as fontes falharem, a última cotação boa continua sendo servida por até 5 minutos.
+// Cache curto no servidor: a cotação do USDT/BRL vem da OKX e é atualizada a cada 5s.
+// Binance e CoinGecko permanecem como fontes de fallback; a última cotação boa dura até 5 minutos.
 const TTL_MS = 5_000;
 const VELHA_MS = 5 * 60_000;
 let cache: { em: number; v: Cotacoes } | null = null;
@@ -21,12 +21,16 @@ const preco = (v: unknown): number | null => {
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
-/** Cotações públicas em R$; USDT prioriza Binance e demais ativos usam CoinGecko. */
+/** Cotações públicas em R$; USDT prioriza OKX, depois Binance e CoinGecko. */
 export const cotacoesBrl = createServerFn({ method: "GET" }).handler(
   async (): Promise<Cotacoes> => {
     if (cache && Date.now() - cache.em < TTL_MS) return cache.v;
     try {
-      const [binanceResult, geckoResult] = await Promise.allSettled([
+      const [okxResult, binanceResult, geckoResult] = await Promise.allSettled([
+        fetch("https://www.okx.com/api/v5/market/ticker?instId=USDT-BRL", {
+          headers: { accept: "application/json" },
+          signal: AbortSignal.timeout(5_000),
+        }),
         fetch("https://api.binance.com/api/v3/ticker/price?symbol=USDTBRL", {
           headers: { accept: "application/json" },
           signal: AbortSignal.timeout(5_000),
@@ -37,10 +41,16 @@ export const cotacoesBrl = createServerFn({ method: "GET" }).handler(
         }),
       ]);
 
+      const okxRes = okxResult.status === "fulfilled" ? okxResult.value : null;
       const binanceRes = binanceResult.status === "fulfilled" ? binanceResult.value : null;
       const geckoRes = geckoResult.status === "fulfilled" ? geckoResult.value : null;
-      if (!binanceRes?.ok && !geckoRes?.ok) throw new Error("fontes de cotação indisponíveis");
+      if (!okxRes?.ok && !binanceRes?.ok && !geckoRes?.ok) {
+        throw new Error("fontes de cotação indisponíveis");
+      }
 
+      const okx = okxRes?.ok
+        ? ((await okxRes.json()) as { code?: string; data?: Array<{ last?: unknown }> })
+        : null;
       const binance = binanceRes?.ok
         ? ((await binanceRes.json()) as { price?: unknown })
         : null;
@@ -52,7 +62,7 @@ export const cotacoesBrl = createServerFn({ method: "GET" }).handler(
         (Object.keys(IDS) as Ativo[]).map((a) => [
           a,
           a === "USDT"
-            ? preco(binance?.price) ?? preco(gecko[IDS[a]]?.brl)
+            ? preco(okx?.data?.[0]?.last) ?? preco(binance?.price) ?? preco(gecko[IDS[a]]?.brl)
             : preco(gecko[IDS[a]]?.brl),
         ]),
       ) as Record<Ativo, number | null>;
