@@ -20,10 +20,10 @@ export type ParMercado = {
   liquidezUsd: number | null;
   fdv: number | null;
   volume24h: number | null;
-  compras24h: number;
-  vendas24h: number;
-  compras1h: number;
-  vendas1h: number;
+  compras24h: number | null;
+  vendas24h: number | null;
+  compras1h: number | null;
+  vendas1h: number | null;
   variacao24h: number | null;
   criadoEm: number | null;
 };
@@ -71,10 +71,10 @@ function paraPar(p: DexPair): ParMercado {
     liquidezUsd: p.liquidity?.usd ?? null,
     fdv: p.fdv ?? null,
     volume24h: p.volume?.h24 ?? null,
-    compras24h: p.txns?.h24?.buys ?? 0,
-    vendas24h: p.txns?.h24?.sells ?? 0,
-    compras1h: p.txns?.h1?.buys ?? 0,
-    vendas1h: p.txns?.h1?.sells ?? 0,
+    compras24h: p.txns?.h24?.buys ?? null,
+    vendas24h: p.txns?.h24?.sells ?? null,
+    compras1h: p.txns?.h1?.buys ?? null,
+    vendas1h: p.txns?.h1?.sells ?? null,
     variacao24h: p.priceChange?.h24 ?? null,
     criadoEm: p.pairCreatedAt ?? null,
   };
@@ -309,8 +309,8 @@ function checagensMercado(p: ParMercado): Checagem[] {
     p.liquidezUsd === null
       ? { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: "desconhecido", valor: `Sem pool de liquidez ainda (${p.dex === "pumpfun" ? "na curva de bonding do pump.fun" : "DexScreener não informa"})` }
       : { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: liq < 10000 ? "alto" : liq < 50000 ? "medio" : "baixo", valor: `$${Math.round(liq).toLocaleString("en-US")}${razao ? ` (${(razao * 100).toFixed(1)}% do FDV)` : ""}` },
-    { categoria: "Comportamento on-chain", criterio: "Compras vs vendas (24h)", nivel: p.vendas24h === 0 && p.compras24h > 20 ? "alto" : "baixo", valor: `${p.compras24h} compras / ${p.vendas24h} vendas${p.vendas24h === 0 && p.compras24h > 20 ? " — ninguém vende: possível honeypot" : ""}` },
-    { categoria: "Comportamento on-chain", criterio: "Volume vs liquidez", nivel: p.volume24h && liq && p.volume24h / liq > 30 ? "medio" : "baixo", valor: `Volume 24h $${Math.round(p.volume24h ?? 0).toLocaleString("en-US")}` },
+    { categoria: "Comportamento on-chain", criterio: "Compras vs vendas (24h)", nivel: p.compras24h === null || p.vendas24h === null ? "desconhecido" : p.vendas24h === 0 && p.compras24h > 20 ? "medio" : "baixo", valor: p.compras24h === null || p.vendas24h === null ? "Sem dados de transações" : `${p.compras24h} compras / ${p.vendas24h} vendas${p.vendas24h === 0 && p.compras24h > 20 ? " — ausência de vendas observadas; verificar capacidade de venda" : ""}` },
+    { categoria: "Comportamento on-chain", criterio: "Volume vs liquidez", nivel: p.volume24h === null || !liq ? "desconhecido" : p.volume24h / liq > 30 ? "medio" : "baixo", valor: p.volume24h === null ? "Sem dados de volume" : `Volume 24h ${Math.round(p.volume24h).toLocaleString("en-US")}` },
   ];
 }
 
