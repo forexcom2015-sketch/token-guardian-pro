@@ -228,14 +228,14 @@ function Dex() {
               rel="noopener noreferrer"
               className="block w-full rounded-md bg-primary px-4 py-3 text-center text-sm font-medium text-primary-foreground"
             >
-              Comprar USDT pelo WhatsApp
+              Comprar
             </a>
           ) : (
             <button
               disabled
               className="w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground opacity-40"
             >
-              Comprar USDT pelo WhatsApp
+              Comprar
             </button>
           )}
 
