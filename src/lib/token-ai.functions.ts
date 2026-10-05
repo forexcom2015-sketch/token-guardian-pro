@@ -182,7 +182,7 @@ export const analisarSegurancaPreLancamento = createServerFn({ method: "GET" })
     const { coletarDados, notaRisco } = await import("./onchain.server");
     const dados = await coletarDados(data.rede, data.endereco);
     if (!dados.fontes.length) throw new Error("Não foi possível obter dados de mercado ou segurança para este token.");
-    const risco = notaRisco(dados.checagens, !dados.fontes.includes("GoPlus Security"));
+    const risco = notaRisco(dados.checagens, !dados.fontes.some((f) => f === "GoPlus Security" || f === "Solana RPC"));
     return { dados, risco, geradoEm: new Date().toISOString() };
   });
 
