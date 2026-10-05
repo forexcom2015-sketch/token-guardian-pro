@@ -18,9 +18,18 @@ export function useUsuario() {
   const [user, setUser] = useState<User | null>(null);
   const [pronto, setPronto] = useState(false);
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => { setUser(data.user); setPronto(true); });
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
-    return () => data.subscription.unsubscribe();
+    // Se a conexão com o backend não estiver configurada, segue sem conta (histórico local).
+    try {
+      supabase.auth.getUser()
+        .then(({ data }) => setUser(data.user))
+        .catch(() => setUser(null))
+        .finally(() => setPronto(true));
+      const { data } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
+      return () => data.subscription.unsubscribe();
+    } catch (e) {
+      console.warn("[historico] backend indisponível, usando histórico local", e);
+      setPronto(true);
+    }
   }, []);
   return { user, pronto };
 }
