@@ -10,9 +10,9 @@ const IDS: Record<Ativo, string> = {
 
 type Cotacoes = { precos: Record<Ativo, number | null>; atualizadoEm: string };
 
-// Cache no servidor: todos os visitantes dividem a mesma consulta ao CoinGecko (limite baixo da API gratuita)
-// e, se o CoinGecko falhar, a última cotação boa continua sendo servida por até 5 minutos.
-const TTL_MS = 60_000;
+// Cache curto no servidor: a cotação do USDT/BRL vem da Binance e é atualizada a cada 5s.
+// Se as fontes falharem, a última cotação boa continua sendo servida por até 5 minutos.
+const TTL_MS = 5_000;
 const VELHA_MS = 5 * 60_000;
 let cache: { em: number; v: Cotacoes } | null = null;
 
@@ -24,15 +24,28 @@ export const cotacoesBrl = createServerFn({ method: "GET" }).handler(
   async (): Promise<Cotacoes> => {
     if (cache && Date.now() - cache.em < TTL_MS) return cache.v;
     try {
-      const url = `https://api.coingecko.com/api/v3/simple/price?vs_currencies=brl&ids=${Object.values(IDS).join(",")}`;
-      const r = await fetch(url, {
-        headers: { accept: "application/json" },
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!r.ok) throw new Error(`status ${r.status}`);
-      const j = (await r.json()) as Record<string, { brl?: unknown }>;
+      const [binanceRes, geckoRes] = await Promise.all([
+        fetch("https://api.binance.com/api/v3/ticker/price?symbol=USDTBRL", {
+          headers: { accept: "application/json" },
+          signal: AbortSignal.timeout(5_000),
+        }),
+        fetch(`https://api.coingecko.com/api/v3/simple/price?vs_currencies=brl&ids=${Object.values(IDS).join(",")}`, {
+          headers: { accept: "application/json" },
+          signal: AbortSignal.timeout(5_000),
+        }),
+      ]);
+      if (!binanceRes.ok && !geckoRes.ok) throw new Error("fontes de cotação indisponíveis");
+
+      const binance = binanceRes.ok ? ((await binanceRes.json()) as { price?: unknown }) : null;
+      const gecko = geckoRes.ok ? ((await geckoRes.json()) as Record<string, { brl?: unknown }>) : {};
+
       const precos = Object.fromEntries(
-        (Object.keys(IDS) as Ativo[]).map((a) => [a, preco(j[IDS[a]]?.brl)]),
+        (Object.keys(IDS) as Ativo[]).map((a) => [
+          a,
+          a === "USDT"
+            ? preco(binance?.price) ?? preco(gecko[IDS[a]]?.brl)
+            : preco(gecko[IDS[a]]?.brl),
+        ]),
       ) as Record<Ativo, number | null>;
       const v = { precos, atualizadoEm: new Date().toISOString() };
       cache = { em: Date.now(), v };
