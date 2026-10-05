@@ -3,22 +3,26 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { Shell } from "@/components/shell";
-import { listarPoolsPreLancamento, listarTokensBondingPreLancamento, listarVendasPreLancamento } from "@/lib/pre-lancamentos.functions";
+import {
+  listarLancamentosPreLancamento,
+  listarPoolsPreLancamento,
+  listarTokensRecentesPreLancamento,
+} from "@/lib/pre-lancamentos.functions";
 
 export const Route = createFileRoute("/pre-lancamentos")({
   head: () => ({
     meta: [
-      { title: "Pré-lançamentos — Token Guardian IA" },
-      { name: "description", content: "Descoberta de pools novas e acompanhamento de tokens antes da negociação." },
-      { property: "og:title", content: "Pré-lançamentos — Token Guardian IA" },
-      { property: "og:description", content: "Pools novas, curvas de bonding e vendas de tokens em áreas separadas." },
+      { title: "Radar de Lançamentos — Token Guardian IA" },
+      { name: "description", content: "Radar público de tokens e pools recém-detectados, sem dependência de API paga." },
+      { property: "og:title", content: "Radar de Lançamentos — Token Guardian IA" },
+      { property: "og:description", content: "GeckoTerminal, DEX Screener e Pump.fun em um único radar de descoberta." },
       { property: "og:type", content: "website" },
     ],
   }),
   component: PreLancamentos,
 });
 
-type Categoria = "pools" | "bonding" | "vendas";
+type Categoria = "radar" | "pools" | "tokens";
 
 const nomeRede: Record<string, string> = {
   solana: "Solana",
@@ -56,87 +60,94 @@ function idade(v: string | null): string {
 }
 
 function PreLancamentos() {
-  const carregar = useServerFn(listarPoolsPreLancamento);
-  const carregarVendas = useServerFn(listarVendasPreLancamento);
-  const carregarBonding = useServerFn(listarTokensBondingPreLancamento);
-  const [categoria, setCategoria] = useState<Categoria>("pools");
+  const carregarRadar = useServerFn(listarLancamentosPreLancamento);
+  const carregarPools = useServerFn(listarPoolsPreLancamento);
+  const carregarTokens = useServerFn(listarTokensRecentesPreLancamento);
+  const [categoria, setCategoria] = useState<Categoria>("radar");
   const [rede, setRede] = useState("todas");
   const [minLiquidez, setMinLiquidez] = useState("0");
-  const consultaBonding = useQuery({
-    queryKey: ["pre-lancamentos", "moralis-pumpfun-bonding"],
-    queryFn: () => carregarBonding(),
-    enabled: categoria === "bonding",
-    refetchInterval: 30_000,
-    staleTime: 20_000,
-    retry: 1,
-  });
-  const consultaVendas = useQuery({
-    queryKey: ["pre-lancamentos", "cryptorank-public-sales"],
-    queryFn: () => carregarVendas(),
-    enabled: categoria === "vendas",
-    refetchInterval: 5 * 60_000,
-    staleTime: 60_000,
-    retry: 1,
-  });
-  const consulta = useQuery({
-    queryKey: ["pre-lancamentos", "geckoterminal-new-pools"],
-    queryFn: () => carregar(),
+
+  const radar = useQuery({
+    queryKey: ["lancamentos", "radar-publico"],
+    queryFn: () => carregarRadar(),
     refetchInterval: 60_000,
     staleTime: 30_000,
     retry: 1,
   });
-  const pools = consulta.data?.pools ?? [];
-  const filtradas = useMemo(() => pools.filter((p) =>
+
+  const pools = useQuery({
+    queryKey: ["lancamentos", "geckoterminal"],
+    queryFn: () => carregarPools(),
+    enabled: categoria === "pools",
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    retry: 1,
+  });
+
+  const tokens = useQuery({
+    queryKey: ["lancamentos", "tokens-publicos"],
+    queryFn: () => carregarTokens(),
+    enabled: categoria === "tokens",
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    retry: 1,
+  });
+
+  const poolsFiltradas = useMemo(() => (pools.data?.pools ?? []).filter((p) =>
     (rede === "todas" || p.rede === rede) &&
     (p.liquidezUsd ?? 0) >= Number(minLiquidez)
-  ), [pools, rede, minLiquidez]);
+  ), [pools.data?.pools, rede, minLiquidez]);
+
+  const radarItens = useMemo(() => (radar.data?.lancamentos ?? []).filter((item) =>
+    rede === "todas" || item.rede === rede
+  ), [radar.data?.lancamentos, rede]);
 
   return (
-    <Shell status={<span className="font-mono text-muted-foreground">{consulta.isFetching ? "atualizando…" : "Feed · atualização a cada 60s"}</span>}>
+    <Shell status={<span className="font-mono text-muted-foreground">{radar.isFetching ? "atualizando…" : "Radar · atualização a cada 60s"}</span>}>
       <div className="mb-6">
-        <div className="label-eyebrow mb-2">Descoberta antecipada</div>
-        <h1 className="text-2xl font-semibold">Pré-lançamentos</h1>
+        <div className="label-eyebrow mb-2">Inteligência de descoberta</div>
+        <h1 className="text-2xl font-semibold">Radar de Lançamentos</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Três estágios diferentes, apresentados separadamente: pools recém-criadas, tokens ainda em curvas de bonding e vendas antes do TGE. Uma pool nova já pode ter negociação e não é, por si só, um pré-lançamento.
+          Descoberta automática baseada em fontes públicas: pools recém-criadas no GeckoTerminal, tokens indexados pelo DEX Screener e tokens recém-criados no Pump.fun. Sem CryptoRank, Moralis ou chave de API obrigatória.
         </p>
       </div>
 
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
+        <button onClick={() => setCategoria("radar")} className={`rounded-lg border p-4 text-left transition-colors ${categoria === "radar" ? "border-primary bg-primary/5" : "border-border hover:bg-secondary/40"}`}>
+          <div className="text-xs font-medium text-muted-foreground">VISÃO GERAL</div>
+          <div className="mt-1 font-semibold text-card-foreground">Radar consolidado</div>
+          <p className="mt-1 text-xs text-muted-foreground">Cruza todas as fontes públicas</p>
+        </button>
         <button onClick={() => setCategoria("pools")} className={`rounded-lg border p-4 text-left transition-colors ${categoria === "pools" ? "border-primary bg-primary/5" : "border-border hover:bg-secondary/40"}`}>
-          <div className="text-xs font-medium text-muted-foreground">ESTÁGIO 1</div>
+          <div className="text-xs font-medium text-muted-foreground">ON-CHAIN</div>
           <div className="mt-1 font-semibold text-card-foreground">Pools novas</div>
-          <p className="mt-1 text-xs text-muted-foreground">Liquidez detectada · GeckoTerminal</p>
+          <p className="mt-1 text-xs text-muted-foreground">GeckoTerminal · liquidez e volume</p>
         </button>
-        <button onClick={() => setCategoria("bonding")} className={`rounded-lg border p-4 text-left transition-colors ${categoria === "bonding" ? "border-primary bg-primary/5" : "border-border hover:bg-secondary/40"}`}>
-          <div className="text-xs font-medium text-muted-foreground">ESTÁGIO 2</div>
-          <div className="mt-1 font-semibold text-card-foreground">Curva de bonding</div>
-          <p className="mt-1 text-xs text-muted-foreground">Antes da pool · integração futura</p>
-        </button>
-        <button onClick={() => setCategoria("vendas")} className={`rounded-lg border p-4 text-left transition-colors ${categoria === "vendas" ? "border-primary bg-primary/5" : "border-border hover:bg-secondary/40"}`}>
-          <div className="text-xs font-medium text-muted-foreground">ESTÁGIO 3</div>
-          <div className="mt-1 font-semibold text-card-foreground">Vendas de tokens</div>
-          <p className="mt-1 text-xs text-muted-foreground">ICO, IDO, IEO e presales</p>
+        <button onClick={() => setCategoria("tokens")} className={`rounded-lg border p-4 text-left transition-colors ${categoria === "tokens" ? "border-primary bg-primary/5" : "border-border hover:bg-secondary/40"}`}>
+          <div className="text-xs font-medium text-muted-foreground">DESCOBERTA</div>
+          <div className="mt-1 font-semibold text-card-foreground">Tokens recentes</div>
+          <p className="mt-1 text-xs text-muted-foreground">DEX Screener + Pump.fun</p>
         </button>
       </div>
 
-      {categoria === "pools" && (
-        <>
-          <section className="panel mb-5 p-4 sm:p-5">
-            <div className="flex flex-wrap items-start gap-3">
-              <div className="mr-auto">
-                <h2 className="font-semibold text-card-foreground">Pools recém-criadas</h2>
-                <p className="mt-1 text-xs text-muted-foreground">Fonte: GeckoTerminal · endpoint público de novas pools · cache no servidor de 45 segundos.</p>
-              </div>
-              <button onClick={() => consulta.refetch()} className="rounded-md border border-border px-3 py-2 text-xs text-card-foreground">Atualizar agora</button>
+      {(categoria === "radar" || categoria === "pools") && (
+        <section className="panel mb-5 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start gap-3">
+            <div className="mr-auto">
+              <h2 className="font-semibold text-card-foreground">{categoria === "radar" ? "Radar consolidado" : "Pools recém-criadas"}</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Dados públicos, com cache no servidor para reduzir chamadas e respeitar limites das fontes.</p>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="text-xs text-muted-foreground">
-                Rede
-                <select value={rede} onChange={(e) => setRede(e.target.value)} className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-card-foreground">
-                  <option value="todas">Todas as redes</option>
-                  {Array.from(new Set(pools.map((p) => p.rede))).sort().map((r) => <option key={r} value={r}>{nomeRede[r] ?? r}</option>)}
-                </select>
-              </label>
+            <button onClick={() => categoria === "radar" ? radar.refetch() : pools.refetch()} className="rounded-md border border-border px-3 py-2 text-xs text-card-foreground">Atualizar agora</button>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs text-muted-foreground">
+              Rede
+              <select value={rede} onChange={(e) => setRede(e.target.value)} className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-card-foreground">
+                <option value="todas">Todas as redes</option>
+                {Array.from(new Set((pools.data?.pools ?? []).map((p) => p.rede))).sort().map((r) => <option key={r} value={r}>{nomeRede[r] ?? r}</option>)}
+              </select>
+            </label>
+            {categoria === "pools" && (
               <label className="text-xs text-muted-foreground">
                 Liquidez mínima
                 <select value={minLiquidez} onChange={(e) => setMinLiquidez(e.target.value)} className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-card-foreground">
@@ -148,123 +159,112 @@ function PreLancamentos() {
                   <option value="100000">US$ 100.000</option>
                 </select>
               </label>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
-              <span>{filtradas.length} pools no filtro</span>
-              <span>·</span>
-              <span>Última resposta: {consulta.data ? dataHora(consulta.data.atualizadoEm) : "aguardando"}</span>
-            </div>
-          </section>
-
-          {consulta.isError && <p className="mb-4 rounded-md border border-danger/30 p-3 text-sm text-danger">Não foi possível carregar o feed. Verifique novamente em instantes.</p>}
-          {consulta.data?.aviso && <p className="mb-4 rounded-md border border-border p-3 text-sm text-muted-foreground">{consulta.data.aviso}</p>}
-          {consulta.isPending && <p className="mb-4 text-sm text-muted-foreground">Consultando novas pools no GeckoTerminal…</p>}
-
-          <div className="grid gap-3">
-            {filtradas.map((p) => (
-              <article key={p.rede + ":" + p.enderecoPool} className="panel p-4 sm:p-5">
-                <div className="flex flex-wrap items-start gap-3">
-                  <div className="mr-auto min-w-0">
-                    <div className="font-semibold text-card-foreground">{p.nome}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{nomeRede[p.rede] ?? p.rede} · {idade(p.criadoEm)} · Base: {p.tokenBase} / Quote: {p.tokenQuote}</div>
-                  </div>
-                  <a href={p.url} target="_blank" rel="noreferrer" className="rounded-md border border-border px-3 py-2 text-xs text-signal underline">Abrir fonte</a>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Preço base</div><div className="mt-1 font-mono text-sm">{moeda(p.precoUsd)}</div></div>
-                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Liquidez</div><div className="mt-1 font-mono text-sm">{moeda(p.liquidezUsd)}</div></div>
-                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Volume 24h</div><div className="mt-1 font-mono text-sm">{moeda(p.volume24hUsd)}</div></div>
-                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Compras / vendas 24h</div><div className="mt-1 font-mono text-sm">{p.compras24h ?? "—"} / {p.vendas24h ?? "—"}</div></div>
-                </div>
-                <div className="mt-3 break-all text-[10px] text-muted-foreground">Pool: {p.enderecoPool}</div>
-                <div className="mt-2 text-[11px] text-muted-foreground">Criada em: {dataHora(p.criadoEm)} · FDV: {moeda(p.fdvUsd)}</div>
-              </article>
-            ))}
+            )}
           </div>
-          {consulta.isSuccess && filtradas.length === 0 && <p className="panel p-5 text-sm text-muted-foreground">Nenhuma pool corresponde aos filtros neste retorno da API. Isso não significa que não existam outras pools novas: o feed é paginado e limitado.</p>}
-          <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">O feed público pode retornar apenas uma página de resultados e está sujeito a limites compartilhados por IP. Liquidez, volume e idade não comprovam legitimidade; valide o contrato e a distribuição antes de qualquer decisão.</p>
-        </>
+          <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <span>{categoria === "radar" ? radarItens.length : poolsFiltradas.length} registros</span>
+            <span>·</span>
+            <span>Última resposta: {dataHora(categoria === "radar" ? radar.data?.atualizadoEm ?? null : pools.data?.atualizadoEm ?? null)}</span>
+          </div>
+        </section>
       )}
 
-      {categoria === "bonding" && (
+      {(radar.isError || pools.isError || tokens.isError) && (
+        <p className="mb-4 rounded-md border border-danger/30 p-3 text-sm text-danger">Não foi possível carregar uma das fontes públicas. Tente novamente em instantes.</p>
+      )}
+
+      {(radar.data?.aviso || pools.data?.aviso || tokens.data?.aviso) && (
+        <p className="mb-4 rounded-md border border-border p-3 text-sm text-muted-foreground">{radar.data?.aviso ?? pools.data?.aviso ?? tokens.data?.aviso}</p>
+      )}
+
+      {categoria === "radar" && (
+        <div className="grid gap-3">
+          {radarItens.map((item) => (
+            <article key={item.id} className="panel p-4 sm:p-5">
+              <div className="flex flex-wrap items-start gap-3">
+                <div className="mr-auto min-w-0">
+                  <div className="font-semibold text-card-foreground">{item.projeto}{item.simbolo ? ` (${item.simbolo})` : ""}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{nomeRede[item.rede] ?? item.rede} · {item.estagio} · {idade(item.criadoEm)}</div>
+                </div>
+                <a href={item.url} target="_blank" rel="noreferrer" className="rounded-md border border-border px-3 py-2 text-xs text-signal underline">Abrir fonte</a>
+              </div>
+              <div className="mt-3 text-sm text-muted-foreground">{item.sinal}</div>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Liquidez</div><div className="mt-1 font-mono text-sm">{moeda(item.liquidezUsd)}</div></div>
+                <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Volume 24h</div><div className="mt-1 font-mono text-sm">{moeda(item.volume24hUsd)}</div></div>
+                <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">FDV</div><div className="mt-1 font-mono text-sm">{moeda(item.fdvUsd)}</div></div>
+              </div>
+              <div className="mt-3 break-all text-[10px] text-muted-foreground">Contrato / pool: {item.endereco}</div>
+            </article>
+          ))}
+          {radar.isSuccess && radarItens.length === 0 && <p className="panel p-5 text-sm text-muted-foreground">Nenhum lançamento detectado para o filtro atual.</p>}
+        </div>
+      )}
+
+      {categoria === "pools" && (
+        <div className="grid gap-3">
+          {poolsFiltradas.map((p) => (
+            <article key={p.rede + ":" + p.enderecoPool} className="panel p-4 sm:p-5">
+              <div className="flex flex-wrap items-start gap-3">
+                <div className="mr-auto min-w-0">
+                  <div className="font-semibold text-card-foreground">{p.nome}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{nomeRede[p.rede] ?? p.rede} · {idade(p.criadoEm)} · Base: {p.tokenBase} / Quote: {p.tokenQuote}</div>
+                </div>
+                <a href={p.url} target="_blank" rel="noreferrer" className="rounded-md border border-border px-3 py-2 text-xs text-signal underline">Abrir fonte</a>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Preço base</div><div className="mt-1 font-mono text-sm">{moeda(p.precoUsd)}</div></div>
+                <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Liquidez</div><div className="mt-1 font-mono text-sm">{moeda(p.liquidezUsd)}</div></div>
+                <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Volume 24h</div><div className="mt-1 font-mono text-sm">{moeda(p.volume24hUsd)}</div></div>
+                <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Compras / vendas</div><div className="mt-1 font-mono text-sm">{p.compras24h ?? "—"} / {p.vendas24h ?? "—"}</div></div>
+              </div>
+              <div className="mt-3 break-all text-[10px] text-muted-foreground">Pool: {p.enderecoPool}</div>
+              <div className="mt-2 text-[11px] text-muted-foreground">Criada em: {dataHora(p.criadoEm)} · FDV: {moeda(p.fdvUsd)}</div>
+            </article>
+          ))}
+          {pools.isSuccess && poolsFiltradas.length === 0 && <p className="panel p-5 text-sm text-muted-foreground">Nenhuma pool corresponde aos filtros no retorno atual.</p>}
+        </div>
+      )}
+
+      {categoria === "tokens" && (
         <section className="max-w-5xl">
           <div className="panel mb-4 p-5 sm:p-6">
-            <div className="text-xs font-medium text-muted-foreground">ESTÁGIO 2 · ANTES DA GRADUAÇÃO</div>
-            <div className="mt-2 flex flex-wrap items-start gap-3">
+            <div className="flex flex-wrap items-start gap-3">
               <div className="mr-auto">
-                <h2 className="font-semibold text-card-foreground">Tokens em curva de bonding</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Fonte: Moralis · Pump.fun · atualização a cada 30 segundos.</p>
+                <div className="text-xs font-medium text-muted-foreground">FONTES PÚBLICAS</div>
+                <h2 className="mt-1 font-semibold text-card-foreground">Tokens recém-detectados</h2>
+                <p className="mt-1 text-sm text-muted-foreground">DEX Screener indexa dados diretamente das blockchains que acompanha; Pump.fun fornece um feed público de tokens recém-criados. citeturn2search3turn2search5</p>
               </div>
-              <button onClick={() => consultaBonding.refetch()} className="rounded-md border border-border px-3 py-2 text-xs text-card-foreground">Atualizar agora</button>
+              <button onClick={() => tokens.refetch()} className="rounded-md border border-border px-3 py-2 text-xs text-card-foreground">Atualizar agora</button>
             </div>
-            {consultaBonding.data?.aviso && <p className="mt-4 rounded-md border border-border p-3 text-sm text-muted-foreground">{consultaBonding.data.aviso}</p>}
-            {consultaBonding.isPending && <p className="mt-4 text-sm text-muted-foreground">Consultando tokens em curva de bonding…</p>}
-            {consultaBonding.isError && <p className="mt-4 text-sm text-danger">Não foi possível carregar os tokens em bonding.</p>}
-            {consultaBonding.data?.configurado && <p className="mt-3 text-xs text-muted-foreground">Última resposta: {dataHora(consultaBonding.data.atualizadoEm)} · {consultaBonding.data.tokens.length} registros retornados.</p>}
           </div>
           <div className="grid gap-3">
-            {(consultaBonding.data?.tokens ?? []).map((t) => (
-              <article key={t.address} className="panel p-4 sm:p-5">
+            {(tokens.data?.tokens ?? []).map((t) => (
+              <article key={t.id} className="panel p-4 sm:p-5">
                 <div className="flex flex-wrap items-start gap-3">
                   <div className="mr-auto min-w-0">
                     <div className="font-semibold text-card-foreground">{t.nome}{t.simbolo ? ` (${t.simbolo})` : ""}</div>
-                    <div className="mt-1 break-all text-xs text-muted-foreground">{t.address}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{nomeRede[t.rede] ?? t.rede} · {idade(t.criadoEm)} · {t.fonte}</div>
                   </div>
-                  <a href={t.url} target="_blank" rel="noreferrer" className="rounded-md border border-border px-3 py-2 text-xs text-signal underline">Abrir Pump.fun</a>
+                  <a href={t.url} target="_blank" rel="noreferrer" className="rounded-md border border-border px-3 py-2 text-xs text-signal underline">Abrir fonte</a>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Capitalização</div><div className="mt-1 font-mono text-sm">{moeda(t.marketCapUsd)}</div></div>
-                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Liquidez</div><div className="mt-1 font-mono text-sm">{moeda(t.liquidezUsd)}</div></div>
                   <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Preço USD</div><div className="mt-1 font-mono text-sm">{moeda(t.precoUsd)}</div></div>
+                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Liquidez</div><div className="mt-1 font-mono text-sm">{moeda(t.liquidezUsd)}</div></div>
                   <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Volume 24h</div><div className="mt-1 font-mono text-sm">{moeda(t.volume24hUsd)}</div></div>
+                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">FDV / Market Cap</div><div className="mt-1 font-mono text-sm">{moeda(t.fdvUsd ?? t.marketCapUsd)}</div></div>
                 </div>
-                {t.progressoCurva !== null && <div className="mt-4"><div className="mb-1 flex justify-between text-xs text-muted-foreground"><span>Progresso da curva</span><span>{t.progressoCurva.toFixed(1)}%</span></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{ width: `${t.progressoCurva}%` }} /></div></div>}
+                <div className="mt-3 break-all text-[10px] text-muted-foreground">Contrato: {t.endereco}</div>
               </article>
             ))}
           </div>
-          {consultaBonding.data?.configurado && consultaBonding.isSuccess && consultaBonding.data.tokens.length === 0 && !consultaBonding.data.aviso && <p className="panel p-5 text-sm text-muted-foreground">A fonte não retornou tokens nesta consulta.</p>}
-          <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">Este feed é específico da curva Pump.fun na Solana. Tokens graduados podem deixar de aparecer nesta categoria. Dados de mercado não comprovam legitimidade nem segurança do contrato.</p>
+          {tokens.isSuccess && (tokens.data?.tokens ?? []).length === 0 && <p className="panel p-5 text-sm text-muted-foreground">Nenhum token recente retornado pelas fontes públicas.</p>}
         </section>
       )}
 
-      {categoria === "vendas" && (
-        <section className="max-w-5xl">
-          <div className="panel mb-4 p-5 sm:p-6">
-            <div className="text-xs font-medium text-muted-foreground">ESTÁGIO 3 · ANTES DO TGE</div>
-            <div className="mt-2 flex flex-wrap items-start gap-3">
-              <div className="mr-auto">
-                <h2 className="font-semibold text-card-foreground">ICO, IDO, IEO e presales</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Fonte: CryptoRank · calendário de vendas públicas · atualização a cada 5 minutos.</p>
-              </div>
-              <button onClick={() => consultaVendas.refetch()} className="rounded-md border border-border px-3 py-2 text-xs text-card-foreground">Atualizar agora</button>
-            </div>
-            {consultaVendas.data?.aviso && <p className="mt-4 rounded-md border border-border p-3 text-sm text-muted-foreground">{consultaVendas.data.aviso}</p>}
-            {consultaVendas.isPending && <p className="mt-4 text-sm text-muted-foreground">Consultando o calendário de vendas…</p>}
-            {consultaVendas.isError && <p className="mt-4 text-sm text-danger">Não foi possível carregar o calendário agora.</p>}
-            {consultaVendas.data?.configurado && <p className="mt-3 text-xs text-muted-foreground">Última resposta: {dataHora(consultaVendas.data.atualizadoEm)} · {consultaVendas.data.vendas.length} registros retornados.</p>}
-          </div>
-          <div className="grid gap-3">
-            {(consultaVendas.data?.vendas ?? []).map((v) => (
-              <article key={v.id} className="panel p-4 sm:p-5">
-                <div className="flex flex-wrap items-start gap-3">
-                  <div className="mr-auto min-w-0">
-                    <div className="font-semibold text-card-foreground">{v.projeto}{v.simbolo ? ` (${v.simbolo})` : ""}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{v.tipo ?? "Venda pública"}{v.launchpad ? ` · Launchpad: ${v.launchpad}` : ""}{v.status ? ` · ${v.status}` : ""}</div>
-                  </div>
-                  {v.url && <a href={v.url} target="_blank" rel="noreferrer" className="rounded-md border border-border px-3 py-2 text-xs text-signal underline">Abrir fonte</a>}
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Início</div><div className="mt-1 text-sm">{dataHora(v.inicio)}</div></div>
-                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Fim</div><div className="mt-1 text-sm">{dataHora(v.fim)}</div></div>
-                  <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Preço divulgado</div><div className="mt-1 font-mono text-sm">{v.preco ?? "—"}</div></div>
-                </div>
-              </article>
-            ))}
-          </div>
-          {consultaVendas.data?.configurado && consultaVendas.isSuccess && consultaVendas.data.vendas.length === 0 && !consultaVendas.data.aviso && <p className="panel p-5 text-sm text-muted-foreground">A fonte não retornou vendas futuras para este filtro.</p>}
-          <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">As datas e os preços dependem da cobertura e do plano da fonte. Confirme os detalhes no projeto ou launchpad oficial; a presença no calendário não representa recomendação de investimento.</p>
-        </section>
-      )}
+      <p className="mt-5 text-[11px] leading-relaxed text-muted-foreground">
+        O radar indica descoberta e atividade pública; não comprova legitimidade, segurança ou potencial de investimento. As APIs públicas possuem limites de requisição e podem mudar. O módulo usa cache e degradação graciosa quando uma fonte fica indisponível. citeturn0search0turn2search0
+      </p>
     </Shell>
   );
 }
