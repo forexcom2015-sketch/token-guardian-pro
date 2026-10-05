@@ -146,7 +146,7 @@ export const analisarReal = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<AnaliseReal> => {
     await limitarUso("analise-ia", 10, 60 * 60);
-    const { coletarDados } = await import("./onchain.server");
+    const { coletarDados, notaRisco } = await import("./onchain.server");
     const dados = await coletarDados(data.rede, data.endereco);
     if (!dados.fontes.length) throw new Error("Token não encontrado nas fontes públicas disponíveis para essa rede.");
     const risco = notaRisco(dados.checagens, !dados.fontes.some((f) => f === "GoPlus Security" || f === "Solana RPC"));
