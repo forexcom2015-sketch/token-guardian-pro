@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { calcularCompra, cotacaoValida, lerReais } from "./dex-calculo";
 import { linkWhatsapp, montarMensagem, numeroWhatsappValido } from "./dex-whatsapp";
 
@@ -102,4 +103,3 @@ describe("WhatsApp", () => {
     expect(decodeURIComponent(link.split("?text=")[1]!)).toContain("Quero comprar USDT");
   });
 });
-import { describe, expect, it } from "vitest";
