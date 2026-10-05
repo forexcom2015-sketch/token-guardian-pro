@@ -233,7 +233,7 @@ function PreLancamentos() {
               <div className="mr-auto">
                 <div className="text-xs font-medium text-muted-foreground">FONTES PÚBLICAS</div>
                 <h2 className="mt-1 font-semibold text-card-foreground">Tokens recém-detectados</h2>
-                <p className="mt-1 text-sm text-muted-foreground">DEX Screener indexa dados diretamente das blockchains que acompanha; Pump.fun fornece um feed público de tokens recém-criados. citeturn2search3turn2search5</p>
+                <p className="mt-1 text-sm text-muted-foreground">DEX Screener indexa dados diretamente das blockchains que acompanha; Pump.fun fornece um feed público de tokens recém-criados.</p>
               </div>
               <button onClick={() => tokens.refetch()} className="rounded-md border border-border px-3 py-2 text-xs text-card-foreground">Atualizar agora</button>
             </div>
@@ -263,7 +263,7 @@ function PreLancamentos() {
       )}
 
       <p className="mt-5 text-[11px] leading-relaxed text-muted-foreground">
-        O radar indica descoberta e atividade pública; não comprova legitimidade, segurança ou potencial de investimento. As APIs públicas possuem limites de requisição e podem mudar. O módulo usa cache e degradação graciosa quando uma fonte fica indisponível. citeturn0search0turn2search0
+        O radar indica descoberta e atividade pública; não comprova legitimidade, segurança ou potencial de investimento. As APIs públicas possuem limites de requisição e podem mudar. O módulo usa cache e degradação graciosa quando uma fonte fica indisponível.
       </p>
     </Shell>
   );
