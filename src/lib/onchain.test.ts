@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { notaRisco, type Checagem } from "./onchain.server";
 
-const checagem = (nivel: Checagem["nivel"], criterio = "Teste"): Checagem => ({
+const checagem = (
+  nivel: Checagem["nivel"],
+  criterio = "Teste",
+): Checagem => ({
   categoria: "Teste",
   criterio,
   nivel,
@@ -19,11 +22,14 @@ describe("notaRisco", () => {
   });
 
   it("scores high, medium and unknown signals deterministically", () => {
-    const risco = notaRisco([
-      checagem("alto", "Blacklist"),
-      checagem("medio", "Liquidez"),
-      checagem("desconhecido", "Ownership"),
-    ], false);
+    const risco = notaRisco(
+      [
+        checagem("alto", "Blacklist"),
+        checagem("medio", "Liquidez"),
+        checagem("desconhecido", "Ownership"),
+      ],
+      false,
+    );
 
     expect(risco.nota).toBe(25);
     expect(risco.nivel).toBe("medio");
@@ -53,18 +59,24 @@ describe("notaRisco", () => {
   });
 
   it("marks coverage as partial when multiple signals are unknown", () => {
-    const risco = notaRisco([
-      checagem("desconhecido", "A"),
-      checagem("desconhecido", "B"),
-      checagem("desconhecido", "C"),
-    ], false);
+    const risco = notaRisco(
+      [
+        checagem("desconhecido", "A"),
+        checagem("desconhecido", "B"),
+        checagem("desconhecido", "C"),
+      ],
+      false,
+    );
 
     expect(risco.cobertura).toBe("parcial");
     expect(risco.nota).toBe(12);
   });
 
   it("caps the deterministic score at 100", () => {
-    const risco = notaRisco(Array.from({ length: 20 }, () => checagem("alto")), false);
+    const risco = notaRisco(
+      Array.from({ length: 20 }, () => checagem("alto")),
+      false,
+    );
 
     expect(risco.nota).toBe(100);
     expect(risco.nivel).toBe("alto");
