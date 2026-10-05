@@ -14,10 +14,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint
+  quality:
+    name: Quality gate
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -27,7 +27,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Install dependencies
         run: npm install
@@ -35,23 +34,11 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+      - name: Typecheck
+        run: npm run typecheck
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm install
+      - name: Run unit tests
+        run: npm test
 
       - name: Build application
         run: npm run build
