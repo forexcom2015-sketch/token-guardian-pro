@@ -23,7 +23,7 @@ export type DadosPedido = {
   carteira?: string | null;
 };
 
-/** Texto pré-preenchido que abre a conversa no WhatsApp. O valor final é sempre confirmado no atendimento. */
+/** Texto pré-preenchido para o atendimento. */
 export function montarMensagem({ compra, precoUsdtBrl, rede, carteira }: DadosPedido): string {
   const linhas = [
     "Olá! Quero comprar USDT pelo Token Guardian.",
@@ -39,8 +39,7 @@ export function montarMensagem({ compra, precoUsdtBrl, rede, carteira }: DadosPe
   return linhas.join("\n");
 }
 
-/** Link wa.me com a mensagem; null se o número de atendimento não estiver configurado/for inválido. */
-export function linkWhatsapp(numero: string, mensagem: string): string | null {
-  if (!numeroWhatsappValido(numero)) return null;
-  return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+/** Link oficial de encaminhamento do atendimento; evita o redirecionamento direto para api.whatsapp.com. */
+export function linkWhatsapp(_numero: string, _mensagem: string): string {
+  return "https://w.app/tokenguardianpro";
 }
