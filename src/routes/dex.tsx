@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Shell } from "@/components/shell";
 import { cotacoesBrl, type Ativo } from "@/lib/dex.functions";
 import { TAXA_COMPRA_BPS, VALOR_MINIMO_BRL, WHATSAPP_NUMERO } from "@/lib/dex-config";
