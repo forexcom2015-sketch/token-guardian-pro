@@ -6,7 +6,7 @@ import { Shell } from "@/components/shell";
 import { cotacoesBrl, type Ativo } from "@/lib/dex.functions";
 import { TAXA_COMPRA_BPS, VALOR_MINIMO_BRL, WHATSAPP_NUMERO } from "@/lib/dex-config";
 import { calcularCompra, cotacaoValida, lerReais } from "@/lib/dex-calculo";
-import { linkWhatsapp, montarMensagem, numeroWhatsappValido } from "@/lib/dex-whatsapp";
+import { numeroWhatsappValido } from "@/lib/dex-whatsapp";
 
 export const Route = createFileRoute("/dex")({
   head: () => ({
@@ -111,13 +111,7 @@ function Dex() {
   const compra = calcularCompra(reais, precoUsdt);
   const rede = REDES_USDT.find((r) => r.id === redeId) ?? REDES_USDT[0];
 
-  const link = useMemo(() => {
-    if (!compra || precoUsdt === null) return null;
-    return linkWhatsapp(
-      WHATSAPP_NUMERO,
-      montarMensagem({ compra, precoUsdtBrl: precoUsdt, rede: rede.nome, carteira: conta }),
-    );
-  }, [compra, precoUsdt, rede.nome, conta]);
+  const link = compra && precoUsdt !== null ? "https://w.app/tokenguardianpro" : null;
 
   const atendimentoConfigurado = numeroWhatsappValido(WHATSAPP_NUMERO);
   const taxaPct = TAXA_COMPRA_BPS / 100;
@@ -224,8 +218,6 @@ function Dex() {
           {link ? (
             <a
               href={link}
-              target="_blank"
-              rel="noopener noreferrer"
               className="block w-full rounded-md bg-primary px-4 py-3 text-center text-sm font-medium text-primary-foreground"
             >
               Comprar
