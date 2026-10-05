@@ -94,7 +94,11 @@ export async function paresDex(rede: Rede, enderecos: string[]): Promise<Map<str
   return mapa;
 }
 
-const sim = (v: unknown) => v === "1" || v === 1;
+const sinal = (v: unknown): boolean | null => {
+  if (v === "1" || v === 1 || v === true) return true;
+  if (v === "0" || v === 0 || v === false) return false;
+  return null;
+};
 
 function nivelTop10(pct: number | null): Checagem["nivel"] {
   if (pct === null) return "desconhecido";
@@ -171,24 +175,57 @@ async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string, pre
   const lp = (d["lp_holders"] as Holder[] | undefined) ?? [];
   const lpTravada = Math.round(lp.filter((h) => h.is_locked || /dead|0x0000/i.test(h.address ?? "")).reduce((s, h) => s + Number(h.percent ?? 0), 0) * 1000) / 10;
   const owner = String(d["owner_address"] ?? "");
-  const renunciado = !owner || /^0x0+$|dead/i.test(owner);
+  const renunciado = /^0x0+$|dead/i.test(owner);
   const taxaNivel = (t: number): Checagem["nivel"] => (isNaN(t) ? "desconhecido" : t > 10 ? "alto" : t > 5 ? "medio" : "baixo");
   const top10 = somaTop10(d["holders"] as Holder[], 100);
   const checagens: Checagem[] = [
     { categoria: "Liquidez e contrato", criterio: "Liquidez travada/queimada", nivel: lp.length ? (lpTravada >= 90 ? "baixo" : lpTravada >= 50 ? "medio" : "alto") : "desconhecido", valor: lp.length ? `${lpTravada}% do LP travado ou queimado` : "Sem dados de LP" },
-    { categoria: "Liquidez e contrato", criterio: "Contrato verificado", nivel: sim(d["is_open_source"]) ? "baixo" : "alto", valor: sim(d["is_open_source"]) ? "Código aberto" : "Código não verificado" },
-    { categoria: "Liquidez e contrato", criterio: "Honeypot", nivel: sim(d["is_honeypot"]) || sim(d["cannot_sell_all"]) ? "alto" : "baixo", valor: sim(d["is_honeypot"]) ? "Simulação indica honeypot" : "Venda simulada passou" },
-    { categoria: "Liquidez e contrato", criterio: "Mint oculto", nivel: sim(d["is_mintable"]) ? "alto" : "baixo", valor: sim(d["is_mintable"]) ? "Dono pode criar tokens" : "Sem função de mint" },
-    { categoria: "Liquidez e contrato", criterio: "Blacklist / pausa", nivel: sim(d["is_blacklisted"]) || sim(d["transfer_pausable"]) ? "alto" : "baixo", valor: [sim(d["is_blacklisted"]) && "blacklist", sim(d["transfer_pausable"]) && "pausa de transferências"].filter(Boolean).join(", ") || "Nenhuma" },
-    { categoria: "Liquidez e contrato", criterio: "Ownership", nivel: renunciado ? "baixo" : sim(d["hidden_owner"]) || sim(d["can_take_back_ownership"]) ? "alto" : "medio", valor: renunciado ? "Renunciado" : `Dono ativo ${owner.slice(0, 8)}…${sim(d["hidden_owner"]) ? " (dono oculto)" : ""}` },
-    { categoria: "Tokenomics", criterio: "Taxa de compra", nivel: taxaNivel(buy), valor: isNaN(buy) ? "?" : `${buy.toFixed(1)}%` },
-    { categoria: "Tokenomics", criterio: "Taxa de venda", nivel: taxaNivel(sell), valor: isNaN(sell) ? "?" : `${sell.toFixed(1)}%` },
-    { categoria: "Tokenomics", criterio: "Taxa alterável", nivel: sim(d["slippage_modifiable"]) ? "alto" : "baixo", valor: sim(d["slippage_modifiable"]) ? "Dono pode mudar taxas" : "Fixa" },
-    { categoria: "Distribuição do supply", criterio: "Top 10 carteiras", nivel: nivelTop10(top10), valor: top10 === null ? "?" : `${top10}% do supply` },
-    { categoria: "Distribuição do supply", criterio: "Carteira do criador", nivel: Number(d["creator_percent"] ?? 0) > 0.05 ? "alto" : "baixo", valor: `${(Number(d["creator_percent"] ?? 0) * 100).toFixed(1)}%` },
-    { categoria: "Sinais externos", criterio: "Histórico do criador", nivel: sim(d["honeypot_with_same_creator"]) ? "alto" : "baixo", valor: sim(d["honeypot_with_same_creator"]) ? "Criador já lançou honeypot" : "Sem honeypot anterior conhecido" },
+    (() => {
+      const v = sinal(d["is_open_source"]);
+      return { categoria: "Liquidez e contrato", criterio: "Contrato verificado", nivel: v === null ? "desconhecido" : v ? "baixo" : "alto", valor: v === null ? "Sem informação" : v ? "Código aberto" : "Código não verificado" };
+    })(),
+    (() => {
+      const h = sinal(d["is_honeypot"]);
+      const s = sinal(d["cannot_sell_all"]);
+      const nivel = h === true || s === true ? "alto" : h === false && s === false ? "baixo" : "desconhecido";
+      const valor = h === true ? "Simulação indica honeypot" : s === true ? "Venda parcialmente bloqueada" : h === false && s === false ? "Venda simulada passou" : "Sem informação suficiente";
+      return { categoria: "Liquidez e contrato", criterio: "Honeypot", nivel, valor };
+    })(),
+    (() => {
+      const v = sinal(d["is_mintable"]);
+      return { categoria: "Liquidez e contrato", criterio: "Mint oculto", nivel: v === null ? "desconhecido" : v ? "alto" : "baixo", valor: v === null ? "Sem informação" : v ? "Dono pode criar tokens" : "Sem função de mint" };
+    })(),
+    (() => {
+      const b = sinal(d["is_blacklisted"]);
+      const p = sinal(d["transfer_pausable"]);
+      const nivel = b === true || p === true ? "alto" : b === false && p === false ? "baixo" : "desconhecido";
+      const valor = [b === true && "blacklist", p === true && "pausa de transferências"].filter(Boolean).join(", ") || (b === false && p === false ? "Nenhuma" : "Sem informação suficiente");
+      return { categoria: "Liquidez e contrato", criterio: "Blacklist / pausa", nivel, valor };
+    })(),
+    (() => {
+      const hidden = sinal(d["hidden_owner"]);
+      const takeover = sinal(d["can_take_back_ownership"]);
+      const nivel = !owner ? "desconhecido" : /^0x0+$|dead/i.test(owner) ? "baixo" : hidden === true || takeover === true ? "alto" : hidden === false && takeover === false ? "medio" : "desconhecido";
+      const valor = !owner ? "Sem informação do proprietário" : /^0x0+$|dead/i.test(owner) ? "Renunciado" : `Dono ativo ${owner.slice(0, 8)}…${hidden === true ? " (dono oculto)" : ""}`;
+      return { categoria: "Liquidez e contrato", criterio: "Ownership", nivel, valor };
+    })(),
+    { categoria: "Tokenomics", criterio: "Taxa de compra", nivel: taxaNivel(buy), valor: isNaN(buy) ? "Sem informação" : `${buy.toFixed(1)}%` },
+    { categoria: "Tokenomics", criterio: "Taxa de venda", nivel: taxaNivel(sell), valor: isNaN(sell) ? "Sem informação" : `${sell.toFixed(1)}%` },
+    (() => {
+      const v = sinal(d["slippage_modifiable"]);
+      return { categoria: "Tokenomics", criterio: "Taxa alterável", nivel: v === null ? "desconhecido" : v ? "alto" : "baixo", valor: v === null ? "Sem informação" : v ? "Dono pode mudar taxas" : "Fixa" };
+    })(),
+    { categoria: "Distribuição do supply", criterio: "Concentração das 10 maiores contas", nivel: nivelTop10(top10), valor: top10 === null ? "Sem informação" : `${top10}% do supply` },
+    (() => {
+      const v = Number.isFinite(Number(d["creator_percent"])) ? Number(d["creator_percent"]) : null;
+      return { categoria: "Distribuição do supply", criterio: "Carteira do criador", nivel: v === null ? "desconhecido" : v > 0.05 ? "alto" : "baixo", valor: v === null ? "Sem informação" : `${(v * 100).toFixed(1)}%` };
+    })(),
+    (() => {
+      const v = sinal(d["honeypot_with_same_creator"]);
+      return { categoria: "Sinais externos", criterio: "Histórico do criador", nivel: v === null ? "desconhecido" : v ? "alto" : "baixo", valor: v === null ? "Sem informação" : v ? "Criador já lançou honeypot" : "Sem honeypot anterior conhecido" };
+    })(),
   ];
-  return { checagens, holders: Number(d["holder_count"] ?? 0) || null, top10, nome: (d["token_name"] as string) ?? null, simbolo: (d["token_symbol"] as string) ?? null };
+  return { checagens, holders: Number(d["holder_count"] ?? 0) || null, top10, nome: (d["token_name"] as string) ?? null, simbolo: (d["token_symbol"] as string) ?? null, fonte: "GoPlus Security" };
 }
 
 // RPC público da Solana: lê o mint direto na blockchain quando o GoPlus não cobre o token.
@@ -243,26 +280,26 @@ async function segurancaSolana(endereco: string, pre?: GoPlusMapa) {
       { categoria: "Liquidez e contrato", criterio: "Freeze authority", nivel: onchain.freezeAtivo === null ? "desconhecido" : onchain.freezeAtivo ? "alto" : "baixo", valor: onchain.freezeAtivo === null ? "?" : onchain.freezeAtivo ? "Ativa — podem congelar carteiras (honeypot)" : "Revogada" },
       { categoria: "Distribuição do supply", criterio: "Top 10 carteiras", nivel: nivelTop10(onchain.top10Pct), valor: onchain.top10Pct === null ? "?" : `${onchain.top10Pct}% do supply` },
     ];
-    return { checagens, holders: null, top10: onchain.top10Pct, nome: null, simbolo: null };
+    return { checagens, holders: null, top10: onchain.top10Pct, nome: null, simbolo: null, fonte: "Solana RPC" };
   }
-  const st = (k: string) => sim((d[k] as { status?: string } | undefined)?.status);
+  const st = (k: string): boolean | null => sinal((d[k] as { status?: string } | undefined)?.status);
   const dex = (d["dex"] as { burn_percent?: number | null; tvl?: string }[] | undefined) ?? [];
   const principal = [...dex].sort((a, b) => Number(b.tvl ?? 0) - Number(a.tvl ?? 0))[0];
   const burn = principal?.burn_percent ?? null;
   const top10 = somaTop10(d["holders"] as Holder[], 100);
   const fee = d["transfer_fee"] as { fee_rate?: { fee_points?: string }[] } | undefined;
-  const feePct = fee?.fee_rate?.[0]?.fee_points ? Number(fee.fee_rate[0].fee_points) / 100 : 0;
+  const feePct = fee?.fee_rate?.[0]?.fee_points !== undefined ? Number(fee.fee_rate[0].fee_points) / 100 : null;
   const meta = d["metadata"] as { name?: string; symbol?: string } | undefined;
   const checagens: Checagem[] = [
     { categoria: "Liquidez e contrato", criterio: "Liquidez queimada/travada", nivel: burn === null ? "desconhecido" : burn >= 90 ? "baixo" : burn >= 50 ? "medio" : "alto", valor: burn === null ? "Sem dados (curva de bonding ou pool sem registro)" : `${burn}% do LP queimado` },
-    { categoria: "Liquidez e contrato", criterio: "Mint authority", nivel: st("mintable") ? "alto" : "baixo", valor: st("mintable") ? "Ativa — podem criar tokens" : "Revogada" },
-    { categoria: "Liquidez e contrato", criterio: "Freeze authority", nivel: st("freezable") ? "alto" : "baixo", valor: st("freezable") ? "Ativa — podem congelar carteiras (honeypot)" : "Revogada" },
-    { categoria: "Liquidez e contrato", criterio: "Metadata alterável", nivel: st("metadata_mutable") ? "medio" : "baixo", valor: st("metadata_mutable") ? "Pode ser alterada" : "Imutável" },
-    { categoria: "Liquidez e contrato", criterio: "Transfer hook / não transferível", nivel: (d["transfer_hook"] as unknown[] | undefined)?.length || sim(d["non_transferable"]) ? "alto" : "baixo", valor: (d["transfer_hook"] as unknown[] | undefined)?.length ? "Possui hook de transferência" : "Nenhum" },
-    { categoria: "Tokenomics", criterio: "Taxa de transferência", nivel: feePct > 10 ? "alto" : feePct > 5 ? "medio" : "baixo", valor: `${feePct}%` },
-    { categoria: "Distribuição do supply", criterio: "Top 10 carteiras", nivel: nivelTop10(top10), valor: top10 === null ? "?" : `${top10}% do supply` },
+    { categoria: "Liquidez e contrato", criterio: "Mint authority", nivel: st("mintable") === null ? "desconhecido" : st("mintable") ? "alto" : "baixo", valor: st("mintable") === null ? "Sem informação" : st("mintable") ? "Ativa — podem criar tokens" : "Revogada" },
+    { categoria: "Liquidez e contrato", criterio: "Freeze authority", nivel: st("freezable") === null ? "desconhecido" : st("freezable") ? "alto" : "baixo", valor: st("freezable") === null ? "Sem informação" : st("freezable") ? "Ativa — podem congelar carteiras" : "Revogada" },
+    { categoria: "Liquidez e contrato", criterio: "Metadata alterável", nivel: st("metadata_mutable") === null ? "desconhecido" : st("metadata_mutable") ? "medio" : "baixo", valor: st("metadata_mutable") === null ? "Sem informação" : st("metadata_mutable") ? "Pode ser alterada" : "Imutável" },
+    { categoria: "Liquidez e contrato", criterio: "Transfer hook / não transferível", nivel: ((d["transfer_hook"] as unknown[] | undefined)?.length || sinal(d["non_transferable"]) === true) ? "alto" : (sinal(d["non_transferable"]) === false && !(d["transfer_hook"] as unknown[] | undefined)?.length) ? "baixo" : "desconhecido", valor: (d["transfer_hook"] as unknown[] | undefined)?.length ? "Possui hook de transferência" : sinal(d["non_transferable"]) === true ? "Não transferível" : sinal(d["non_transferable"]) === false ? "Nenhum" : "Sem informação" },
+    { categoria: "Tokenomics", criterio: "Taxa de transferência", nivel: feePct === null || Number.isNaN(feePct) ? "desconhecido" : feePct > 10 ? "alto" : feePct > 5 ? "medio" : "baixo", valor: feePct === null || Number.isNaN(feePct) ? "Sem informação" : `${feePct}%` },
+    { categoria: "Distribuição do supply", criterio: "Concentração das 10 maiores contas", nivel: nivelTop10(top10), valor: top10 === null ? "Sem informação" : `${top10}% do supply` },
   ];
-  return { checagens, holders: Number(d["holder_count"] ?? 0) || null, top10, nome: meta?.name ?? null, simbolo: meta?.symbol ?? null };
+  return { checagens, holders: Number(d["holder_count"] ?? 0) || null, top10, nome: meta?.name ?? null, simbolo: meta?.symbol ?? null, fonte: "GoPlus Security" };
 }
 
 function checagensMercado(p: ParMercado): Checagem[] {
@@ -278,7 +315,7 @@ function checagensMercado(p: ParMercado): Checagem[] {
 }
 
 export type ItemNota = { criterio: string; categoria: string; valor: string; nivel: Checagem["nivel"]; pontos: number };
-export type NotaRisco = { nota: number; nivel: "baixo" | "medio" | "alto"; altos: number; medios: number; desconhecidos: number; alertas: string[]; semSeguranca: boolean; itens: ItemNota[] };
+export type NotaRisco = { nota: number; nivel: "baixo" | "medio" | "alto"; altos: number; medios: number; desconhecidos: number; alertas: string[]; semSeguranca: boolean; cobertura: "completa" | "parcial" | "insuficiente"; itens: ItemNota[] };
 
 const PONTOS: Record<Checagem["nivel"], number> = { alto: 15, medio: 6, desconhecido: 4, baixo: 0 };
 
@@ -292,7 +329,8 @@ export function notaRisco(checagens: Checagem[], semSeguranca: boolean): NotaRis
   const itens: ItemNota[] = checagens.map((c) => ({ criterio: c.criterio, categoria: c.categoria, valor: c.valor, nivel: c.nivel, pontos: PONTOS[c.nivel] }));
   if (critico) itens.push({ criterio: "Sinal crítico (honeypot/freeze/mint)", categoria: "Liquidez e contrato", valor: "Agravante aplicado à nota", nivel: "alto", pontos: 25 });
   if (semSeguranca) itens.push({ criterio: "Sem checagem de segurança", categoria: "Liquidez e contrato", valor: "GoPlus não retornou dados", nivel: "desconhecido", pontos: 50 });
-  return { nota, nivel: nota >= 50 ? "alto" : nota >= 20 ? "medio" : "baixo", altos, medios, desconhecidos, alertas: checagens.filter((c) => c.nivel === "alto").map((c) => c.criterio).slice(0, 3), semSeguranca, itens };
+  const cobertura: NotaRisco["cobertura"] = semSeguranca ? "insuficiente" : desconhecidos >= 3 ? "parcial" : "completa";
+  return { nota, nivel: nota >= 50 ? "alto" : nota >= 20 ? "medio" : "baixo", altos, medios, desconhecidos, alertas: checagens.filter((c) => c.nivel === "alto").map((c) => c.criterio).slice(0, 3), semSeguranca, cobertura, itens };
 }
 
 export async function coletarDados(rede: Rede, endereco: string): Promise<DadosToken> {
@@ -311,7 +349,7 @@ export async function coletarDados(rede: Rede, endereco: string): Promise<DadosT
     holders: seg?.holders ?? null,
     top10Pct: seg?.top10 ?? null,
     checagens,
-    fontes: [dex && "DexScreener", seg && "GoPlus Security"].filter(Boolean) as string[],
+    fontes: [dex && "DexScreener", seg?.fonte].filter(Boolean) as string[],
   };
 }
 
