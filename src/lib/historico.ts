@@ -58,9 +58,10 @@ export function useHistorico() {
   }, [user, carregar]);
 
   const salvar = useCallback(async (a: AnaliseReal) => {
-    const { data } = await supabase.auth.getUser();
-    if (data.user) {
-      await supabase.from("analises").insert(linha(a, data.user.id));
+    let uid: string | null = null;
+    try { uid = (await supabase.auth.getUser()).data.user?.id ?? null; } catch { uid = null; }
+    if (uid) {
+      await supabase.from("analises").insert(linha(a, uid));
       setItens((l) => [a, ...l]);
       return;
     }
