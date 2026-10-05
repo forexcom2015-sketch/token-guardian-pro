@@ -164,11 +164,11 @@ function idadeMs(v: string | number | null | undefined): number | null {
 }
 
 function paresMetricas(pair: DexPair) {
-  const h24 = pair.txns?.h24;
+  const h24 = pair.txns?.["h24"];
   return {
     precoUsd: numero(pair.priceUsd),
     liquidezUsd: numero(pair.liquidity?.usd),
-    volume24hUsd: numero(pair.volume?.h24),
+    volume24hUsd: numero(pair.volume?.["h24"]),
     fdvUsd: numero(pair.fdv),
     marketCapUsd: numero(pair.marketCap),
     compras24h: numero(h24?.buys),

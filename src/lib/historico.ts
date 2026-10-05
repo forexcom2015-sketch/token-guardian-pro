@@ -92,7 +92,7 @@ function linha(a: AnaliseReal, userId: string) {
     endereco: a.dados.endereco,
     nome: a.dados.nome,
     simbolo: a.dados.simbolo,
-    score: a.parecer?.score ?? null,
+    score: a.risco?.nota ?? null,
     analise: a as unknown as Json,
     gerado_em: a.geradoEm,
   };

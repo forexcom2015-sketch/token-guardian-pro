@@ -47,7 +47,7 @@ function Historico() {
                   <span className="flex items-center gap-1"><NivelPonto nivel="alto" />{conta("alto")}</span>
                   <span className="flex items-center gap-1"><NivelPonto nivel="medio" />{conta("medio")}</span>
                   <span className="flex items-center gap-1"><NivelPonto nivel="baixo" />{conta("baixo")}</span>
-                  {a.parecer && <span className="font-mono text-lg text-card-foreground">{a.parecer.score}</span>}
+                  {a.risco && <span className="font-mono text-lg text-card-foreground">{a.risco.nota}</span>}
                 </div>
                 <div className="flex gap-3 text-xs">
                   {linksToken(d.rede, d.endereco).map((l) => <a key={l.rotulo} href={l.url} target="_blank" rel="noreferrer" className="text-signal hover:underline">{l.rotulo}</a>)}
