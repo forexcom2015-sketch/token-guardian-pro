@@ -37,7 +37,7 @@ export function Shell({ status, children }: { status: ReactNode; children: React
         </Link>
         <nav className="flex flex-wrap gap-5 text-xs text-muted-foreground">
           {navItens.map((item) => (
-            <Link key={item.to} to={item.to} activeOptions={{ exact: item.to === "/" }}
+            <Link key={item.to} to={item.to} activeOptions={{ exact: true }}
               activeProps={{ className: "text-signal font-medium" }}
               className="transition-colors hover:text-card-foreground">
               {item.rotulo}

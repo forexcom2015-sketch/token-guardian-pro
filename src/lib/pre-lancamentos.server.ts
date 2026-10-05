@@ -147,12 +147,12 @@ function textoCampo(obj: RegistroGenerico, chaves: string[]): string | null {
 function registrosVenda(payload: unknown): RegistroGenerico[] {
   if (!payload || typeof payload !== "object") return [];
   const raiz = payload as RegistroGenerico;
-  const dados = Array.isArray(raiz.data) ? raiz.data : [];
+  const dados = Array.isArray(raiz["data"]) ? raiz["data"] : [];
   const saida: RegistroGenerico[] = [];
   for (const item of dados) {
     if (!item || typeof item !== "object") continue;
     const projeto = item as RegistroGenerico;
-    const vendasAninhadas = projeto.publicSales ?? projeto.public_sales ?? projeto.crowdsales ?? projeto.sales;
+    const vendasAninhadas = projeto["publicSales"] ?? projeto["public_sales"] ?? projeto["crowdsales"] ?? projeto["sales"];
     if (Array.isArray(vendasAninhadas)) {
       for (const venda of vendasAninhadas) {
         if (venda && typeof venda === "object") {
@@ -204,7 +204,7 @@ export async function listarVendasPublicas(): Promise<{
 
     const payload: unknown = await response.json();
     const vendas = registrosVenda(payload).map((item, index): VendaPublica | null => {
-      const pai = item._projeto && typeof item._projeto === "object" ? item._projeto as RegistroGenerico : item;
+      const pai = item["_projeto"] && typeof item["_projeto"] === "object" ? item["_projeto"] as RegistroGenerico : item;
       const projeto = textoCampo(item, ["name", "projectName", "project_name", "currencyName"]) ??
         textoCampo(pai, ["name", "projectName", "project_name", "currencyName"]);
       if (!projeto) return null;

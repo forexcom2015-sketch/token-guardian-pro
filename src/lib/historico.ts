@@ -29,6 +29,7 @@ export function useUsuario() {
     } catch (e) {
       console.warn("[historico] backend indisponível, usando histórico local", e);
       setPronto(true);
+      return undefined;
     }
   }, []);
   return { user, pronto };
