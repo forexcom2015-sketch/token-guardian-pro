@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DesempenhoRouteImport } from './routes/desempenho'
-import { Route as DexRouteImport } from './routes/dex'
 import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as LancamentosRouteImport } from './routes/lancamentos'
 import { Route as PainelRouteImport } from './routes/painel'
@@ -26,11 +25,6 @@ const IndexRoute = IndexRouteImport.update({
 const DesempenhoRoute = DesempenhoRouteImport.update({
   id: '/desempenho',
   path: '/desempenho',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DexRoute = DexRouteImport.update({
-  id: '/dex',
-  path: '/dex',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoricoRoute = HistoricoRouteImport.update({
@@ -62,7 +56,6 @@ const RadarRoute = RadarRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/desempenho': typeof DesempenhoRoute
-  '/dex': typeof DexRoute
   '/historico': typeof HistoricoRoute
   '/lancamentos': typeof LancamentosRoute
   '/painel': typeof PainelRoute
@@ -72,7 +65,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/desempenho': typeof DesempenhoRoute
-  '/dex': typeof DexRoute
   '/historico': typeof HistoricoRoute
   '/lancamentos': typeof LancamentosRoute
   '/painel': typeof PainelRoute
@@ -83,7 +75,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/desempenho': typeof DesempenhoRoute
-  '/dex': typeof DexRoute
   '/historico': typeof HistoricoRoute
   '/lancamentos': typeof LancamentosRoute
   '/painel': typeof PainelRoute
@@ -95,7 +86,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/desempenho'
-    | '/dex'
     | '/historico'
     | '/lancamentos'
     | '/painel'
@@ -105,7 +95,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/desempenho'
-    | '/dex'
     | '/historico'
     | '/lancamentos'
     | '/painel'
@@ -115,7 +104,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/desempenho'
-    | '/dex'
     | '/historico'
     | '/lancamentos'
     | '/painel'
@@ -126,7 +114,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DesempenhoRoute: typeof DesempenhoRoute
-  DexRoute: typeof DexRoute
   HistoricoRoute: typeof HistoricoRoute
   LancamentosRoute: typeof LancamentosRoute
   PainelRoute: typeof PainelRoute
@@ -148,13 +135,6 @@ declare module '@tanstack/react-router' {
       path: '/desempenho'
       fullPath: '/desempenho'
       preLoaderRoute: typeof DesempenhoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dex': {
-      id: '/dex'
-      path: '/dex'
-      fullPath: '/dex'
-      preLoaderRoute: typeof DexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/historico': {
@@ -198,7 +178,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DesempenhoRoute: DesempenhoRoute,
-  DexRoute: DexRoute,
   HistoricoRoute: HistoricoRoute,
   LancamentosRoute: LancamentosRoute,
   PainelRoute: PainelRoute,
