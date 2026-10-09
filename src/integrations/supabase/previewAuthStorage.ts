@@ -52,7 +52,6 @@ export function brokeredPreviewStorage() {
       const msg: Record<string, unknown> = { type, requestId, projectId, key };
       if (value !== undefined) msg['value'] = value;
       // targetOrigin per trusted editor origin, so a session token never reaches an arbitrary embedder.
-      const timer = setTimeout(() => finish(null), TIMEOUT);
       for (const origin of editorOrigins) window.parent.postMessage(msg, origin);
     });
 
