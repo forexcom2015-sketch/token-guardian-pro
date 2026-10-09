@@ -98,6 +98,7 @@ function extrairJson<T>(texto: string): T {
 import type { DadosToken, NotaRisco, Rede } from "./onchain.server";
 import { entradaTokenSchema } from "./enderecos";
 import { detectarManipulacao, type AnaliseManipulacao } from "./manipulacao";
+import type { AnaliseTransacoes } from "./analise-transacoes.server";
 export type { DadosToken, Rede } from "./onchain.server";
 
 export type ParecerIA = {
@@ -106,7 +107,7 @@ export type ParecerIA = {
   proximosPassos: string[];
 };
 
-export type AnaliseReal = { dados: DadosToken; risco: NotaRisco; manipulacao: AnaliseManipulacao; parecer: ParecerIA | null; erroIA: string | null; geradoEm: string };
+export type AnaliseReal = { dados: DadosToken; risco: NotaRisco; manipulacao: AnaliseManipulacao; transacoes: AnaliseTransacoes; parecer: ParecerIA | null; erroIA: string | null; geradoEm: string };
 
 const INSTRUCOES_PARECER = `Você é um analista on-chain de um curso de due diligence de tokens, em português do Brasil.
 Você recebe DADOS REAIS coletados agora do DexScreener e do GoPlus, já com um checklist pontuado (baixo/medio/alto/desconhecido).
@@ -128,10 +129,12 @@ export const analisarReal = createServerFn({ method: "POST" })
     if (!dados.fontes.length) throw new Error("Token não encontrado nas fontes públicas disponíveis para essa rede.");
     const risco = notaRisco(dados.checagens, !dados.fontes.some((f) => f === "GoPlus Security" || f === "Solana RPC"));
     const manipulacao = detectarManipulacao(dados.mercado);
+    const { analisarTransacoesPool } = await import("./analise-transacoes.server");
+    const transacoes = await analisarTransacoesPool(data.rede, dados.mercado?.parAddress ?? null);
     let parecer: ParecerIA | null = null;
     let erroIA: string | null = null;
     try {
-      const p = extrairJson<ParecerIA>(await chamarIA(INSTRUCOES_PARECER, JSON.stringify({ ...dados, detectorManipulacao: manipulacao })));
+      const p = extrairJson<ParecerIA>(await chamarIA(INSTRUCOES_PARECER, JSON.stringify({ ...dados, detectorManipulacao: manipulacao, analiseTransacoes: transacoes })));
       parecer = {
         resumo: String(p.resumo ?? ""),
         pontosAtencao: Array.isArray(p.pontosAtencao) ? p.pontosAtencao.slice(0, 5) : [],
@@ -140,7 +143,7 @@ export const analisarReal = createServerFn({ method: "POST" })
     } catch (e) {
       erroIA = e instanceof Error ? e.message : "A IA não respondeu.";
     }
-    return { dados, risco, manipulacao, parecer, erroIA, geradoEm: new Date().toISOString() };
+    return { dados, risco, manipulacao, transacoes, parecer, erroIA, geradoEm: new Date().toISOString() };
   });
 
 export const listarLancamentos = createServerFn({ method: "GET" }).handler(async () => {
