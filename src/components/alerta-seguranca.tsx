@@ -13,7 +13,7 @@ export type TokenAlerta = {
 };
 
 /** Faixa de alerta: 85% a 100% de segurança = nota de risco 0 a 15. */
-export const SEGURANCA_MINIMA = 85;
+export const SEGURANCA_MINIMA = 80; // TEMP: teste
 
 export function segurancaPct(nota: number): number {
   return Math.max(0, Math.min(100, 100 - nota));
