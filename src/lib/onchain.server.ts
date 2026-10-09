@@ -15,6 +15,7 @@ export type Checagem = {
 
 export type ParMercado = {
   dex: string;
+  parAddress: string | null;
   url: string;
   precoUsd: number | null;
   liquidezUsd: number | null;
@@ -41,6 +42,7 @@ export type DadosToken = {
 };
 
 type DexPair = {
+  pairAddress?: string;
   dexId: string;
   url: string;
   baseToken: { address: string; name: string; symbol: string };
@@ -66,6 +68,7 @@ async function getJson<T>(url: string): Promise<T | null> {
 function paraPar(p: DexPair): ParMercado {
   return {
     dex: p.dexId,
+    parAddress: p.pairAddress ?? null,
     url: p.url,
     precoUsd: p.priceUsd ? Number(p.priceUsd) : null,
     liquidezUsd: p.liquidity?.usd ?? null,
