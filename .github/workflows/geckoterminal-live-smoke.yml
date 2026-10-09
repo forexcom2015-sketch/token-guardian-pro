@@ -1,0 +1,28 @@
+name: GeckoTerminal live smoke test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: geckoterminal-live-smoke
+  cancel-in-progress: false
+
+jobs:
+  live-smoke:
+    name: Live trade collection (4 networks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate live GeckoTerminal trade collection
+        run: node scripts/smoke-geckoterminal.mjs
