@@ -127,6 +127,7 @@ export const analisarReal = createServerFn({ method: "POST" })
     const dados = await coletarDados(data.rede, data.endereco);
     if (!dados.fontes.length) throw new Error("Token não encontrado nas fontes públicas disponíveis para essa rede.");
     const risco = notaRisco(dados.checagens, !dados.fontes.some((f) => f === "GoPlus Security" || f === "Solana RPC"));
+    const manipulacao = detectarManipulacao(dados.mercado);
     let parecer: ParecerIA | null = null;
     let erroIA: string | null = null;
     try {
