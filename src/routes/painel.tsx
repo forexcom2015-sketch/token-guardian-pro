@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Shell } from "@/components/shell";
 import { SeloRisco } from "@/components/risco";
+import { AlertaSeguranca } from "@/components/alerta-seguranca";
 import { listarLancamentos } from "@/lib/token-ai.functions";
 import { idade, linksToken, nomesRede, usd } from "@/lib/historico";
 
@@ -41,6 +42,7 @@ function Painel() {
           <span className="text-danger">{n("alto")} perigo</span>
         </div>
       </div>
+      <AlertaSeguranca tokens={tokens} />
       {q.isError && <p className="text-sm text-danger">Não foi possível carregar agora.</p>}
       {q.isPending && <p className="text-sm text-muted-foreground">Coletando lançamentos e checagens de segurança…</p>}
       <ol className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
