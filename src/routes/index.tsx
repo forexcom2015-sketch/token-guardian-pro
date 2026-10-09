@@ -131,6 +131,65 @@ function Inicio() {
         </section>
 
         <section className="panel p-6 sm:p-8">
+          <div className="label-eyebrow mb-2">Metodologia transparente</div>
+          <h2 className="text-2xl font-semibold text-card-foreground">Como calculamos o risco de um token</h2>
+          <p className="mt-3 max-w-4xl text-sm leading-relaxed text-muted-foreground">
+            O Radar combina verificações de segurança e indicadores de mercado disponíveis para o endereço e a rede selecionados. Cada verificação recebe uma classificação técnica; a nota oficial é calculada por regras determinísticas do sistema. A IA pode explicar os resultados, mas não recalcula nem substitui a nota.
+          </p>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <article className="rounded-md border border-border p-4">
+              <h3 className="text-sm font-semibold text-card-foreground">Contrato e permissões</h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Verifica contrato aberto/verificado, honeypot e capacidade de venda, criação de tokens (mint), blacklist, pausa de transferências, controle do proprietário e taxas de compra/venda ou transferência, conforme a rede.</p>
+            </article>
+            <article className="rounded-md border border-border p-4">
+              <h3 className="text-sm font-semibold text-card-foreground">Liquidez e mercado</h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Considera liquidez em USD, indícios de liquidez travada ou queimada, volume de 24 horas e contagem de compras e vendas. Liquidez abaixo de US$ 10 mil é classificada como alta exposição; abaixo de US$ 50 mil, como média.</p>
+            </article>
+            <article className="rounded-md border border-border p-4">
+              <h3 className="text-sm font-semibold text-card-foreground">Distribuição e sinais on-chain</h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Analisa a concentração das dez maiores carteiras/contas, a carteira do criador quando informada e, na Solana, autoridades de mint e freeze. A cobertura depende dos dados retornados pela rede e pela fonte.</p>
+            </article>
+          </div>
+
+          <div className="mt-6">
+            <h3 className="text-base font-semibold text-card-foreground">Pontuação oficial: 0 a 100</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Cada verificação contribui para a nota: risco alto = 15 pontos; médio = 6; desconhecido = 4; baixo = 0. A nota é limitada a 100. Se não houver uma fonte de segurança reconhecida, são acrescentados 50 pontos; sinais críticos de honeypot, freeze ou mint classificados como altos acrescentam mais 25 pontos.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-md border border-border p-4">
+                <div className="font-mono text-xs text-signal">0–19 PONTOS</div>
+                <h4 className="mt-2 text-sm font-semibold text-card-foreground">Risco baixo</h4>
+                <p className="mt-1 text-xs text-muted-foreground">Poucos pontos acumulados nas verificações disponíveis; não é garantia de segurança.</p>
+              </div>
+              <div className="rounded-md border border-border p-4">
+                <div className="font-mono text-xs text-signal">20–49 PONTOS</div>
+                <h4 className="mt-2 text-sm font-semibold text-card-foreground">Risco médio</h4>
+                <p className="mt-1 text-xs text-muted-foreground">Há fatores de atenção que devem ser examinados antes de qualquer decisão.</p>
+              </div>
+              <div className="rounded-md border border-border p-4">
+                <div className="font-mono text-xs text-signal">50–100 PONTOS</div>
+                <h4 className="mt-2 text-sm font-semibold text-card-foreground">Risco alto</h4>
+                <p className="mt-1 text-xs text-muted-foreground">A pontuação acumulada indica maior exposição ou sinais críticos.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <h3 className="text-base font-semibold text-card-foreground">Fontes e limites da análise</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Os dados atuais são obtidos do DexScreener para pares e métricas de mercado, do GoPlus Security para verificações de segurança e da RPC pública da Solana quando aplicável. A cobertura varia por rede e token. A nota considera os itens retornados, portanto não é uma auditoria completa do contrato nem uma previsão de desempenho.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              A cobertura aparece como insuficiente quando não há checagem de segurança reconhecida, parcial quando existem três ou mais verificações desconhecidas, e completa quando essas condições não se aplicam. “Completa” descreve apenas a cobertura do checklist, não significa que todos os riscos possíveis foram eliminados.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Um indicador desconhecido não significa que o token passou no teste. APIs podem não ter dados, a liquidez pode ainda não existir ou uma função pode não ser verificável. Confira os detalhes, a rede e o endereço do contrato; nunca interprete a nota como recomendação de compra ou garantia de segurança.
+            </p>
+            <Link to="/radar" className="mt-5 inline-flex rounded-md border border-border px-4 py-2.5 text-xs font-medium text-card-foreground">Verificar um token no Radar ↗</Link>
+          </div>
+        </section>
+
+        <section className="panel p-6 sm:p-8">
           <div className="label-eyebrow mb-2">Entenda os riscos do mercado</div>
           <h2 className="text-2xl font-semibold text-card-foreground">O que pode dar errado?</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
