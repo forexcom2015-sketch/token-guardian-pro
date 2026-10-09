@@ -90,7 +90,7 @@ export async function analisarTransacoesPool(rede: Rede, poolAddress: string | n
   const cached = cache.get(key);
   if (cached && cached.expires > Date.now()) return cached.result;
 
-  const url = `https://api.geckoterminal.com/api/v2/networks/${NETWORK[rede]}/pools/${encodeURIComponent(poolAddress)}/trades?page=1`;
+  const url = `https://api.geckoterminal.com/api/v2/networks/${NETWORK[rede]}/pools/${encodeURIComponent(poolAddress)}/trades?page=1&limit=300`;
   try {
     const response = await fetch(url, {
       headers: { accept: "application/json;version=20230302" },
