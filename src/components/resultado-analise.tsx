@@ -52,6 +52,57 @@ export function ResultadoAnalise({ analise }: { analise: AnaliseReal }) {
         </div>
       </div>
 
+      <div className="panel p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="label-eyebrow mb-1">Detector de manipulação</div>
+            <h3 className="text-lg font-semibold text-card-foreground">Atividade suspeita no lançamento</h3>
+            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">
+              Avaliação determinística de liquidez, giro de volume, desequilíbrio de compras/vendas e atividade inicial. Não confirma bots nem identifica carteiras coordenadas.
+            </p>
+          </div>
+          <div className="min-w-24 text-right">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Suspeita</div>
+            <div className={`mt-1 text-lg font-semibold ${analise.manipulacao?.nivel === "alto" ? "text-danger" : analise.manipulacao?.nivel === "moderado" ? "text-warning" : "text-card-foreground"}`}>
+              {analise.manipulacao?.nivel === "alto" ? "Alta" : analise.manipulacao?.nivel === "moderado" ? "Moderada" : analise.manipulacao?.nivel === "baixo" ? "Baixa" : "Indeterminada"}
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              {analise.manipulacao?.score == null ? "Score —" : `Score ${analise.manipulacao.score}/100`}
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 rounded-md bg-background p-3 text-xs leading-relaxed text-muted-foreground ring-1 ring-border">
+          {analise.manipulacao?.observacao ?? "Esta análise salva foi criada antes do detector estar disponível. Faça uma nova análise para avaliar os sinais de negociação."}
+        </div>
+        {analise.manipulacao?.sinais?.length ? (
+          <div className="mt-3 space-y-2">
+            {analise.manipulacao.sinais.map((s) => (
+              <div key={s.codigo} className="rounded-md border border-border p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-card-foreground">{s.titulo}</span>
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground">+{s.pontos} pontos · {s.nivel}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{s.evidencia}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">Nenhum sinal de alerta foi calculado a partir dos indicadores agregados disponíveis.</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
+          <span>Cobertura: {analise.manipulacao?.cobertura ?? "não disponível"}</span>
+          {analise.manipulacao?.idadeParMinutos != null && <span>Idade do par: {analise.manipulacao.idadeParMinutos} min</span>}
+        </div>
+        {analise.manipulacao?.limitacoes?.length ? (
+          <details className="mt-3 text-xs text-muted-foreground">
+            <summary className="cursor-pointer text-card-foreground">Limitações e como interpretar</summary>
+            <ul className="mt-2 list-disc space-y-1 pl-4">
+              {analise.manipulacao.limitacoes.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </details>
+        ) : null}
+      </div>
+
       {parecer ? (
         <div className="panel p-5">
           <div className="label-eyebrow mb-2">Interpretação da IA</div>
