@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Fragment, useState } from "react";
 import { Shell } from "@/components/shell";
 import { SeloRisco } from "@/components/risco";
+import { AlertaSeguranca } from "@/components/alerta-seguranca";
 import { analisarSegurancaPreLancamento, listarLancamentos, type Rede } from "@/lib/token-ai.functions";
 import { idade, nomesRede, usd } from "@/lib/historico";
 
@@ -37,6 +38,8 @@ function Lancamentos() {
           Acompanhe tokens que já possuem pares de negociação detectados publicamente. Consulte a origem dos dados, métricas de mercado e checklist de segurança antes de tirar conclusões.
         </p>
       </div>
+
+      <AlertaSeguranca tokens={q.data?.tokens ?? []} />
 
       <section className="panel mb-6 p-4 sm:p-5">
         <h2 className="mb-3 text-sm font-semibold text-card-foreground">Como estes tokens são encontrados?</h2>
