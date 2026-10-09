@@ -1,6 +1,12 @@
 name: GeckoTerminal live smoke test
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "src/lib/analise-transacoes.server.ts"
+      - "scripts/smoke-geckoterminal.mjs"
+      - ".github/workflows/geckoterminal-live-smoke.yml"
   workflow_dispatch:
 
 permissions:
