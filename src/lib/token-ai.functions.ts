@@ -97,6 +97,7 @@ function extrairJson<T>(texto: string): T {
 
 import type { DadosToken, NotaRisco, Rede } from "./onchain.server";
 import { entradaTokenSchema } from "./enderecos";
+import { detectarManipulacao, type AnaliseManipulacao } from "./manipulacao";
 export type { DadosToken, Rede } from "./onchain.server";
 
 export type ParecerIA = {
@@ -105,13 +106,13 @@ export type ParecerIA = {
   proximosPassos: string[];
 };
 
-export type AnaliseReal = { dados: DadosToken; risco: NotaRisco; parecer: ParecerIA | null; erroIA: string | null; geradoEm: string };
+export type AnaliseReal = { dados: DadosToken; risco: NotaRisco; manipulacao: AnaliseManipulacao; parecer: ParecerIA | null; erroIA: string | null; geradoEm: string };
 
 const INSTRUCOES_PARECER = `Você é um analista on-chain de um curso de due diligence de tokens, em português do Brasil.
 Você recebe DADOS REAIS coletados agora do DexScreener e do GoPlus, já com um checklist pontuado (baixo/medio/alto/desconhecido).
 Não invente números: use só os dados recebidos. Itens "desconhecido" devem virar próximos passos de verificação.
 Considere as 5 categorias do curso: Liquidez e contrato, Distribuição do supply, Comportamento on-chain, Tokenomics, Sinais externos (redes sociais e histórico do dev não vêm nos dados: peça verificação manual).
-O score e o nível de risco oficiais já foram calculados de forma determinística pelo sistema; NÃO recalcule, substitua ou invente outro score.
+O score e o nível de risco do contrato oficiais já foram calculados de forma determinística pelo sistema; NÃO recalcule, substitua ou invente outro score. Há também um detector separado de padrões agregados de negociação: explique seus sinais sem afirmar que eles provam bots, fraude ou wash trading. Dados agregados não permitem identificar a mesma carteira em compras e vendas nem relacionar carteiras por financiador.
 Nunca recomende comprar ou vender.
 Responda SOMENTE com JSON: {"resumo":string,"pontosAtencao":[string],"proximosPassos":[string]}
 Máximo 5 itens em cada lista.`;
@@ -129,7 +130,7 @@ export const analisarReal = createServerFn({ method: "POST" })
     let parecer: ParecerIA | null = null;
     let erroIA: string | null = null;
     try {
-      const p = extrairJson<ParecerIA>(await chamarIA(INSTRUCOES_PARECER, JSON.stringify(dados)));
+      const p = extrairJson<ParecerIA>(await chamarIA(INSTRUCOES_PARECER, JSON.stringify({ ...dados, detectorManipulacao: manipulacao })));
       parecer = {
         resumo: String(p.resumo ?? ""),
         pontosAtencao: Array.isArray(p.pontosAtencao) ? p.pontosAtencao.slice(0, 5) : [],
@@ -138,7 +139,7 @@ export const analisarReal = createServerFn({ method: "POST" })
     } catch (e) {
       erroIA = e instanceof Error ? e.message : "A IA não respondeu.";
     }
-    return { dados, risco, parecer, erroIA, geradoEm: new Date().toISOString() };
+    return { dados, risco, manipulacao, parecer, erroIA, geradoEm: new Date().toISOString() };
   });
 
 export const listarLancamentos = createServerFn({ method: "GET" }).handler(async () => {
