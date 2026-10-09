@@ -103,6 +103,72 @@ export function ResultadoAnalise({ analise }: { analise: AnaliseReal }) {
         ) : null}
       </div>
 
+      <div className="panel p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="label-eyebrow mb-1">Análise on-chain de transações</div>
+            <h3 className="text-lg font-semibold text-card-foreground">Padrões de atividade por carteira</h3>
+            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">
+              Amostra de trades individuais do pool público. Procura repetição, compras e vendas pela mesma origem e frequência elevada.
+            </p>
+          </div>
+          <div className="min-w-24 text-right">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Padrão suspeito</div>
+            <div className={`mt-1 text-lg font-semibold ${analise.transacoes?.nivel === "alto" ? "text-danger" : analise.transacoes?.nivel === "moderado" ? "text-warning" : "text-card-foreground"}`}>
+              {analise.transacoes?.nivel === "alto" ? "Alto" : analise.transacoes?.nivel === "moderado" ? "Moderado" : analise.transacoes?.nivel === "baixo" ? "Baixo" : "Indeterminado"}
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              {analise.transacoes?.score == null ? "Score —" : `Score ${analise.transacoes.score}/100`}
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+          {[
+            ["Trades analisados", String(analise.transacoes?.transacoesAmostradas ?? 0)],
+            ["Origens únicas", String(analise.transacoes?.carteirasUnicas ?? 0)],
+            ["Compraram e venderam", String(analise.transacoes?.carteirasCompraramEVenderam ?? 0)],
+            ["Alta frequência", String(analise.transacoes?.carteirasAltaFrequencia ?? 0)],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-md bg-background p-3 ring-1 ring-border">
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+              <div className="mt-1 font-mono text-lg text-card-foreground">{value}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 rounded-md bg-background p-3 text-xs leading-relaxed text-muted-foreground ring-1 ring-border">
+          {analise.transacoes?.observacao ?? "Esta análise salva não contém dados individuais de transações. Execute uma nova análise para consultar a amostra pública."}
+        </div>
+        {analise.transacoes?.evidencias?.length ? (
+          <div className="mt-3">
+            <div className="mb-2 text-xs font-medium text-card-foreground">Origens com mais operações na amostra</div>
+            <div className="space-y-2">
+              {analise.transacoes.evidencias.map((w) => (
+                <div key={w.endereco} className="rounded-md border border-border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <code className="text-xs text-card-foreground">{w.endereco.slice(0, 8)}…{w.endereco.slice(-6)}</code>
+                    <span className="text-[10px] text-muted-foreground">{w.operacoes} operações · {w.operacoesEmMinuto} em 1 min</span>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">{w.compras} compras · {w.vendas} vendas</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
+          <span>Fonte: {analise.transacoes?.fonte ?? "não disponível"}</span>
+          <span>Cobertura: {analise.transacoes?.cobertura ?? "não disponível"}</span>
+          <span>Operações de origens repetidas: {analise.transacoes?.percentualOperacoesDeCarteirasRepetidas == null ? "—" : `${analise.transacoes.percentualOperacoesDeCarteirasRepetidas}%`}</span>
+        </div>
+        {analise.transacoes?.limitacoes?.length ? (
+          <details className="mt-3 text-xs text-muted-foreground">
+            <summary className="cursor-pointer text-card-foreground">Limitações e interpretação</summary>
+            <ul className="mt-2 list-disc space-y-1 pl-4">
+              {analise.transacoes.limitacoes.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </details>
+        ) : null}
+      </div>
+
       {parecer ? (
         <div className="panel p-5">
           <div className="label-eyebrow mb-2">Interpretação da IA</div>
