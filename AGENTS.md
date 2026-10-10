@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Embed DexScreener charts directly from each token's market pair address with lazy-loaded iframes; this preserves the provider's live chart without inventing historical price data.
