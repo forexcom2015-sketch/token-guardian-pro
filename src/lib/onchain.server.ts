@@ -26,6 +26,8 @@ export type ParMercado = {
   compras1h: number | null;
   vendas1h: number | null;
   variacao24h: number | null;
+  variacao1h: number | null;
+  variacao5m: number | null;
   criadoEm: number | null;
 };
 
@@ -51,7 +53,7 @@ type DexPair = {
   fdv?: number;
   volume?: { h24?: number };
   txns?: { h24?: { buys: number; sells: number }; h1?: { buys: number; sells: number } };
-  priceChange?: { h24?: number };
+  priceChange?: { h24?: number; h1?: number; m5?: number };
   pairCreatedAt?: number;
 };
 
