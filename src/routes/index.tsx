@@ -144,7 +144,7 @@ function Inicio() {
             </article>
             <article className="rounded-md border border-border p-4">
               <h3 className="text-sm font-semibold text-card-foreground">Liquidez e mercado</h3>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Considera liquidez em USD, indícios de liquidez travada ou queimada, volume de 24 horas e contagem de compras e vendas. Liquidez abaixo de US$ 10 mil é classificada como alta exposição; abaixo de US$ 50 mil, como média.</p>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Considera indícios de liquidez travada ou queimada, volume de 24 horas e contagem de compras e vendas. A nota de risco usa a classificação das verificações retornadas; a liquidez em USD também é usada como filtro separado no alerta de alta segurança, com mínimos provisórios de US$ 25 mil em Solana, BSC e Base e US$ 50 mil em Ethereum. Esses mínimos são parâmetros iniciais, não limites validados empiricamente.</p>
             </article>
             <article className="rounded-md border border-border p-4">
               <h3 className="text-sm font-semibold text-card-foreground">Distribuição e sinais on-chain</h3>
