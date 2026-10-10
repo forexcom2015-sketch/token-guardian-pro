@@ -1,26 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, LogOut, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-type Provider = {
-  isMetaMask?: boolean;
-  providers?: Provider[];
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-  on?: (event: string, listener: (value: unknown) => void) => void;
-  removeListener?: (event: string, listener: (value: unknown) => void) => void;
-};
+import { assinarEventosMetaMask, normalizarChainId, validarContaMetaMask, type MetaMaskProvider } from "@/lib/metamask";
 
 const redes: Record<string, string> = {
   "0x1": "Ethereum", "0x38": "BNB Chain", "0x2105": "Base",
   "0x89": "Polygon", "0xa4b1": "Arbitrum", "0xa": "Optimism",
 };
 
-function contaValida(value: unknown): string | null {
-  return Array.isArray(value) && typeof value[0] === "string" && /^0x[0-9a-f]{40}$/i.test(value[0]) ? value[0] : null;
-}
-
 export function CarteiraMetaMask() {
-  const [provider, setProvider] = useState<Provider | null>(null);
+  const [provider, setProvider] = useState<MetaMaskProvider | null>(null);
   const [conta, setConta] = useState<string | null>(null);
   const [rede, setRede] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -31,14 +20,14 @@ export function CarteiraMetaMask() {
   useEffect(() => {
     try { desligada.current = sessionStorage.getItem("metamask-desconectada") === "1"; } catch { /* Storage is optional. */ }
     const descobrir = (event: Event) => {
-      const detail = (event as CustomEvent<{ info?: { rdns?: string }; provider?: Provider }>).detail;
+      const detail = (event as CustomEvent<{ info?: { rdns?: string }; provider?: MetaMaskProvider }>).detail;
       if (detail?.info?.rdns === "io.metamask" && detail.provider?.request) {
         setProvider(detail.provider);
         setAusente(false);
       }
     };
     const legado = () => {
-      const injected = (window as Window & { ethereum?: Provider }).ethereum;
+      const injected = (window as Window & { ethereum?: MetaMaskProvider }).ethereum;
       const metamask = injected?.providers?.find((p) => p.isMetaMask) ?? (injected?.isMetaMask ? injected : null);
       if (metamask) { setProvider((p) => p ?? metamask); setAusente(false); }
     };
@@ -54,23 +43,20 @@ export function CarteiraMetaMask() {
 
   useEffect(() => {
     if (!provider) return;
-    let ativo = true;
-    const atualizarRede = (value: unknown) => { if (ativo) setRede(typeof value === "string" ? value.toLowerCase() : null); };
-    const atualizarConta = (value: unknown) => { if (ativo && !desligada.current) setConta(contaValida(value)); };
-    const desconectou = () => { if (ativo) { setConta(null); setRede(null); } };
-    if (!desligada.current) {
-      void provider.request({ method: "eth_accounts" }).then(atualizarConta).catch(() => {});
-      void provider.request({ method: "eth_chainId" }).then(atualizarRede).catch(() => {});
-    }
-    provider.on?.("accountsChanged", atualizarConta);
-    provider.on?.("chainChanged", atualizarRede);
-    provider.on?.("disconnect", desconectou);
-    return () => {
-      ativo = false;
-      provider.removeListener?.("accountsChanged", atualizarConta);
-      provider.removeListener?.("chainChanged", atualizarRede);
-      provider.removeListener?.("disconnect", desconectou);
+    const atualizarRede = (value: string | null) => setRede(value);
+    const atualizarConta = (value: string | null) => {
+      if (!desligada.current) setConta(value);
     };
+    const desconectou = () => { setConta(null); setRede(null); };
+    if (!desligada.current) {
+      void provider.request({ method: "eth_accounts" }).then((value) => atualizarConta(validarContaMetaMask(value))).catch(() => {});
+      void provider.request({ method: "eth_chainId" }).then((value) => atualizarRede(normalizarChainId(value))).catch(() => {});
+    }
+    return assinarEventosMetaMask(provider, {
+      onAccountsChanged: atualizarConta,
+      onChainChanged: atualizarRede,
+      onDisconnect: desconectou,
+    });
   }, [provider]);
 
   async function conectar() {
@@ -79,7 +65,7 @@ export function CarteiraMetaMask() {
     setOcupado(true);
     try {
       const accounts = await provider.request({ method: "eth_requestAccounts" });
-      const address = contaValida(accounts);
+      const address = validarContaMetaMask(accounts);
       if (!address) throw new Error("Nenhuma conta foi autorizada na MetaMask.");
       desligada.current = false;
       try { sessionStorage.removeItem("metamask-desconectada"); } catch { /* Storage is optional. */ }
