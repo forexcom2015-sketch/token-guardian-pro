@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { idade, linksToken, nomesRede, usd } from "@/lib/historico";
 import type { NotaRisco, Rede } from "@/lib/onchain.server";
+import { elegivelParaAlerta, SEGURANCA_MINIMA, segurancaPct } from "@/lib/alerta";
+export { SEGURANCA_MINIMA, segurancaPct, emFaixaDeAlerta } from "@/lib/alerta";
 
 export type TokenAlerta = {
   rede: Rede;
@@ -12,19 +14,10 @@ export type TokenAlerta = {
   risco: NotaRisco;
 };
 
-/** Faixa de alerta: 85% a 100% de segurança = nota de risco 0 a 15. */
-export const SEGURANCA_MINIMA = 80; // TEMP: teste
-
-export function segurancaPct(nota: number): number {
-  return Math.max(0, Math.min(100, 100 - nota));
-}
-
-export function emFaixaDeAlerta(risco: NotaRisco): boolean {
-  return !risco.semSeguranca && risco.nivel === "baixo" && segurancaPct(risco.nota) >= SEGURANCA_MINIMA;
-}
-
 export function AlertaSeguranca({ tokens }: { tokens: TokenAlerta[] }) {
-  const alvo = tokens.filter((t) => emFaixaDeAlerta(t.risco));
+  const alvo = tokens.filter((t) =>
+    elegivelParaAlerta({ rede: t.rede, liquidezUsd: t.mercado.liquidezUsd, risco: t.risco }),
+  );
   if (!alvo.length) return null;
 
   return (
@@ -65,7 +58,7 @@ export function AlertaSeguranca({ tokens }: { tokens: TokenAlerta[] }) {
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-[11px] text-muted-foreground">Só entram aqui tokens com checagem de segurança completa e nenhum sinal grave no checklist. Ainda assim, confira antes de decidir — não é recomendação de compra.</p>
+      <p className="mt-3 text-[11px] text-muted-foreground">Só entram aqui tokens com cobertura completa, verificações críticas aprovadas e liquidez mínima para a rede. Os limites de liquidez são parâmetros iniciais e serão calibrados com dados reais. Ainda assim, confira antes de decidir — não é recomendação de compra.</p>
     </section>
   );
 }
