@@ -7,6 +7,7 @@ import { SeloRisco } from "@/components/risco";
 import { AlertaSeguranca } from "@/components/alerta-seguranca";
 import { analisarSegurancaPreLancamento, listarLancamentos, type Rede } from "@/lib/token-ai.functions";
 import { idade, nomesRede, usd } from "@/lib/historico";
+import type { AvaliacaoAlerta } from "@/lib/alerta";
 
 export const Route = createFileRoute("/lancamentos")({
   head: () => ({
@@ -112,6 +113,7 @@ function Lancamentos() {
                   {expandido && (
                     <tr key={id + ":security"}>
                       <td colSpan={10} className="bg-secondary/20 p-4">
+                        <MotivosAlerta alerta={t.alerta} />
                         <DetalheSeguranca rede={t.rede} endereco={t.endereco} />
                       </td>
                     </tr>
@@ -128,6 +130,20 @@ function Lancamentos() {
         A pontuação vai de 0 a 100; quanto maior, maior o risco estimado. A lista pode incluir tokens que já começaram a negociar e não garante cobertura completa. Um resultado sem alertas não prova que um token é seguro: confirme endereço, liquidez, contrato, distribuição e fontes independentes. Conteúdo informativo, não é recomendação financeira.
       </p>
     </Shell>
+  );
+}
+
+function MotivosAlerta({ alerta }: { alerta: AvaliacaoAlerta }) {
+  if (alerta.elegivel) {
+    return <p className="mb-3 text-xs text-signal">Este token está na faixa do alerta de alta segurança.</p>;
+  }
+  return (
+    <div className="mb-3 rounded-md border border-border p-3">
+      <div className="mb-1 text-xs font-semibold text-card-foreground">Fora do alerta de alta segurança</div>
+      <ul className="list-disc pl-4 text-xs text-muted-foreground">
+        {alerta.motivos.map((m) => <li key={m}>{m}</li>)}
+      </ul>
+    </div>
   );
 }
 
