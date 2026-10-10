@@ -49,7 +49,7 @@ describe("notaRisco", () => {
 
     expect(risco.nota).toBe(40);
     expect(risco.nivel).toBe("medio");
-    expect(risco.alertas).toEqual(["Honeypot"]);
+    expect(risco.alertas).toEqual(["honeypot"]);
     expect(risco.itens.at(-1)?.criterio).toBe("Sinal crítico (honeypot/freeze/mint)");
   });
 
