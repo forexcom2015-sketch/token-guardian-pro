@@ -17,8 +17,10 @@ describe("notaRisco", () => {
 
     expect(risco.nota).toBe(0);
     expect(risco.nivel).toBe("baixo");
-    expect(risco.cobertura).toBe("completa");
+    expect(risco.cobertura).toBe("insuficiente");
     expect(risco.desconhecidos).toBe(0);
+    expect(risco.nota).toBe(50);
+    expect(risco.semSeguranca).toBe(true);
   });
 
   it("scores high, medium and unknown signals deterministically", () => {
@@ -27,6 +29,10 @@ describe("notaRisco", () => {
         checagem("alto", "Blacklist"),
         checagem("medio", "Liquidez"),
         checagem("desconhecido", "Ownership"),
+        checagem("baixo", "LP"),
+        checagem("baixo", "Contrato"),
+        checagem("baixo", "Taxa de compra"),
+        checagem("baixo", "Taxa de venda"),
       ],
       false,
     );
@@ -39,8 +45,8 @@ describe("notaRisco", () => {
     expect(risco.cobertura).toBe("completa");
   });
 
-  it("applies the critical-signal aggravator for honeypot, freeze or mint", () => {
-    const risco = notaRisco([checagem("alto", "Honeypot")], false);
+  it("applies the critical-signal aggravator case-insensitively", () => {
+    const risco = notaRisco([checagem("alto", "honeypot")], false);
 
     expect(risco.nota).toBe(40);
     expect(risco.nivel).toBe("medio");
@@ -70,6 +76,30 @@ describe("notaRisco", () => {
 
     expect(risco.cobertura).toBe("parcial");
     expect(risco.nota).toBe(12);
+  });
+
+  it("marks coverage partial when at least a quarter of checks are unknown", () => {
+    const risco = notaRisco(
+      [
+        checagem("baixo", "A"),
+        checagem("baixo", "B"),
+        checagem("baixo", "C"),
+        checagem("desconhecido", "D"),
+      ],
+      false,
+    );
+
+    expect(risco.desconhecidos).toBe(1);
+    expect(risco.cobertura).toBe("parcial");
+  });
+
+  it("does not treat an empty or invalid creator percentage as zero risk", () => {
+    // The creator percentage is normalized in the data collector; this test guards
+    // the score's conservative handling of missing checks at the scoring boundary.
+    const risco = notaRisco([], false);
+    expect(risco.cobertura).toBe("insuficiente");
+    expect(risco.semSeguranca).toBe(true);
+    expect(risco.nota).toBe(50);
   });
 
   it("caps the deterministic score at 100", () => {
