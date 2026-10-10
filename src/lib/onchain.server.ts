@@ -17,6 +17,7 @@ export type ParMercado = {
   dex: string;
   parAddress: string | null;
   url: string;
+  siteOficial: string | null;
   precoUsd: number | null;
   liquidezUsd: number | null;
   fdv: number | null;
@@ -47,6 +48,7 @@ type DexPair = {
   pairAddress?: string;
   dexId: string;
   url: string;
+  info?: { websites?: { url?: string; label?: string }[] };
   baseToken: { address: string; name: string; symbol: string };
   priceUsd?: string;
   liquidity?: { usd?: number };
@@ -72,6 +74,7 @@ function paraPar(p: DexPair): ParMercado {
     dex: p.dexId,
     parAddress: p.pairAddress ?? null,
     url: p.url,
+    siteOficial: p.info?.websites?.map((s) => s.url).find((u) => typeof u === "string" && /^https?:\/\//i.test(u)) ?? null,
     precoUsd: p.priceUsd ? Number(p.priceUsd) : null,
     liquidezUsd: p.liquidity?.usd ?? null,
     fdv: p.fdv ?? null,
@@ -198,7 +201,7 @@ async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string, pre
   const taxaNivel = (t: number): Checagem["nivel"] => (isNaN(t) ? "desconhecido" : t > 10 ? "alto" : t > 5 ? "medio" : "baixo");
   const top10 = somaTop10(d["holders"] as Holder[], 100);
   const checagens: Checagem[] = [
-    { categoria: "Liquidez e contrato", criterio: "Liquidez travada/queimada", nivel: lp.length ? (lpTravada >= 90 ? "baixo" : lpTravada >= 50 ? "medio" : "alto") : "desconhecido", valor: lp.length ? `${lpTravada}% do LP travado ou queimado` : "Sem dados de LP" },
+    { categoria: "Liquidez e contrato", criterio: "Status da liquidez (LP)", nivel: lp.length ? (lpTravada >= 90 ? "baixo" : lpTravada >= 50 ? "medio" : "alto") : "desconhecido", valor: lp.length ? (lpTravada >= 90 ? `PROTEGIDA — ${lpTravada}% travado/queimado` : lpTravada > 0 ? `PARCIAL — ${lpTravada}% travado/queimado; restante potencialmente removível` : "ABERTA — nenhum LP travado/queimado identificado") : "DESCONHECIDA — fonte não retornou dados de LP" },
     (() => {
       const v = sinal(d["is_open_source"]);
       return { categoria: "Liquidez e contrato", criterio: "Contrato verificado", nivel: v === null ? "desconhecido" : v ? "baixo" : "alto", valor: v === null ? "Sem informação" : v ? "Código aberto" : "Código não verificado" };
@@ -297,7 +300,7 @@ async function segurancaSolana(endereco: string, pre?: GoPlusMapa) {
     // GoPlus sem dados: pontua mesmo assim com o que a blockchain informa.
     if (onchain.mintAtivo === null && onchain.top10Pct === null) return null;
     const checagens: Checagem[] = [
-      { categoria: "Liquidez e contrato", criterio: "Liquidez queimada/travada", nivel: "desconhecido", valor: "Sem dados (curva de bonding ou pool sem registro)" },
+      { categoria: "Liquidez e contrato", criterio: "Status da liquidez (LP)", nivel: "desconhecido", valor: "DESCONHECIDA — sem dados verificáveis de LP; pode ser bonding curve ou pool sem registro" },
       { categoria: "Liquidez e contrato", criterio: "Mint authority", nivel: onchain.mintAtivo === null ? "desconhecido" : onchain.mintAtivo ? "alto" : "baixo", valor: onchain.mintAtivo === null ? "?" : onchain.mintAtivo ? "Ativa — podem criar tokens" : "Revogada" },
       { categoria: "Liquidez e contrato", criterio: "Freeze authority", nivel: onchain.freezeAtivo === null ? "desconhecido" : onchain.freezeAtivo ? "alto" : "baixo", valor: onchain.freezeAtivo === null ? "?" : onchain.freezeAtivo ? "Ativa — podem congelar carteiras (honeypot)" : "Revogada" },
       { categoria: "Distribuição do supply", criterio: "Top 10 carteiras", nivel: nivelTop10(onchain.top10Pct), valor: onchain.top10Pct === null ? "?" : `${onchain.top10Pct}% do supply` },
@@ -313,7 +316,7 @@ async function segurancaSolana(endereco: string, pre?: GoPlusMapa) {
   const feePct = fee?.fee_rate?.[0]?.fee_points !== undefined ? Number(fee.fee_rate[0].fee_points) / 100 : null;
   const meta = d["metadata"] as { name?: string; symbol?: string } | undefined;
   const checagens: Checagem[] = [
-    { categoria: "Liquidez e contrato", criterio: "Liquidez queimada/travada", nivel: burn === null ? "desconhecido" : burn >= 90 ? "baixo" : burn >= 50 ? "medio" : "alto", valor: burn === null ? "Sem dados (curva de bonding ou pool sem registro)" : `${burn}% do LP queimado` },
+    { categoria: "Liquidez e contrato", criterio: "Status da liquidez (LP)", nivel: burn === null ? "desconhecido" : burn >= 90 ? "baixo" : burn >= 50 ? "medio" : "alto", valor: burn === null ? "DESCONHECIDA — sem dados verificáveis de LP; pode ser bonding curve ou pool sem registro" : burn >= 90 ? `PROTEGIDA — ${burn}% do LP queimado segundo a fonte` : burn > 0 ? `PARCIAL — ${burn}% do LP queimado; restante pode ser removível` : "ABERTA — nenhum LP queimado identificado; bloqueio não confirmado" },
     { categoria: "Liquidez e contrato", criterio: "Mint authority", nivel: st("mintable") === null ? "desconhecido" : st("mintable") ? "alto" : "baixo", valor: st("mintable") === null ? "Sem informação" : st("mintable") ? "Ativa — podem criar tokens" : "Revogada" },
     { categoria: "Liquidez e contrato", criterio: "Freeze authority", nivel: st("freezable") === null ? "desconhecido" : st("freezable") ? "alto" : "baixo", valor: st("freezable") === null ? "Sem informação" : st("freezable") ? "Ativa — podem congelar carteiras" : "Revogada" },
     { categoria: "Liquidez e contrato", criterio: "Metadata alterável", nivel: st("metadata_mutable") === null ? "desconhecido" : st("metadata_mutable") ? "medio" : "baixo", valor: st("metadata_mutable") === null ? "Sem informação" : st("metadata_mutable") ? "Pode ser alterada" : "Imutável" },
