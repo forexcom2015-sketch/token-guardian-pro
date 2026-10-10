@@ -12,14 +12,13 @@ const checagem = (
 });
 
 describe("notaRisco", () => {
-  it("returns zero risk for an empty complete checklist", () => {
+  it("treats an empty checklist as insufficient data, not as zero risk", () => {
     const risco = notaRisco([], false);
 
-    expect(risco.nota).toBe(0);
-    expect(risco.nivel).toBe("baixo");
+    expect(risco.nota).toBe(50);
+    expect(risco.nivel).toBe("alto");
     expect(risco.cobertura).toBe("insuficiente");
     expect(risco.desconhecidos).toBe(0);
-    expect(risco.nota).toBe(50);
     expect(risco.semSeguranca).toBe(true);
   });
 
@@ -91,15 +90,6 @@ describe("notaRisco", () => {
 
     expect(risco.desconhecidos).toBe(1);
     expect(risco.cobertura).toBe("parcial");
-  });
-
-  it("does not treat an empty or invalid creator percentage as zero risk", () => {
-    // The creator percentage is normalized in the data collector; this test guards
-    // the score's conservative handling of missing checks at the scoring boundary.
-    const risco = notaRisco([], false);
-    expect(risco.cobertura).toBe("insuficiente");
-    expect(risco.semSeguranca).toBe(true);
-    expect(risco.nota).toBe(50);
   });
 
   it("caps the deterministic score at 100", () => {
