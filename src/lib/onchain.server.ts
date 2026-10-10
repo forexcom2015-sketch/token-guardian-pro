@@ -26,6 +26,8 @@ export type ParMercado = {
   compras1h: number | null;
   vendas1h: number | null;
   variacao24h: number | null;
+  variacao1h: number | null;
+  variacao5m: number | null;
   criadoEm: number | null;
 };
 
@@ -51,7 +53,7 @@ type DexPair = {
   fdv?: number;
   volume?: { h24?: number };
   txns?: { h24?: { buys: number; sells: number }; h1?: { buys: number; sells: number } };
-  priceChange?: { h24?: number };
+  priceChange?: { h24?: number; h1?: number; m5?: number };
   pairCreatedAt?: number;
 };
 
@@ -79,6 +81,8 @@ function paraPar(p: DexPair): ParMercado {
     compras1h: p.txns?.h1?.buys ?? null,
     vendas1h: p.txns?.h1?.sells ?? null,
     variacao24h: p.priceChange?.h24 ?? null,
+    variacao1h: p.priceChange?.h1 ?? null,
+    variacao5m: p.priceChange?.m5 ?? null,
     criadoEm: p.pairCreatedAt ?? null,
   };
 }
