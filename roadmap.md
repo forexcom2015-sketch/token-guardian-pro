@@ -8,3 +8,4 @@
 - [x] Parecer da IA no Radar IA (dados reais)
 - [x] Checagem Solana completa no Painel e Lançamentos
 - [x] DEX removida do sistema (página, cálculos, configuração e item do menu)
+- [ ] Conectar MetaMask no menu, sem DEX, Pix ou transações
