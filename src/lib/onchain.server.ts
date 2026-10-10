@@ -81,6 +81,8 @@ function paraPar(p: DexPair): ParMercado {
     compras1h: p.txns?.h1?.buys ?? null,
     vendas1h: p.txns?.h1?.sells ?? null,
     variacao24h: p.priceChange?.h24 ?? null,
+    variacao1h: p.priceChange?.h1 ?? null,
+    variacao5m: p.priceChange?.m5 ?? null,
     criadoEm: p.pairCreatedAt ?? null,
   };
 }
