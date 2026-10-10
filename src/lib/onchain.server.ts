@@ -118,7 +118,19 @@ function somaTop10(holders: Holder[] | undefined, fator: number): number | null 
   const lista = holders
     .filter((h) => !ignorar.test(h.address ?? h.account ?? "") && !h.is_locked)
     .slice(0, 10);
-  return Math.round(lista.reduce((s, h) => s + Number(h.percent ?? 0) * fator, 0) * 10) / 10;
+  if (!lista.length) return null;
+
+  const percentuais = lista.map((h) => {
+    const bruto = h.percent;
+    if (bruto === undefined || bruto === null || (typeof bruto === "string" && bruto.trim() === "")) {
+      return null;
+    }
+    const percentual = Number(bruto);
+    return Number.isFinite(percentual) && percentual >= 0 ? percentual : null;
+  });
+  if (percentuais.some((percentual) => percentual === null)) return null;
+
+  return Math.round(percentuais.reduce<number>((s, percentual) => s + percentual! * fator, 0) * 10) / 10;
 }
 
 type GoPlusMapa = Record<string, Record<string, unknown>>;
@@ -220,7 +232,10 @@ async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string, pre
     })(),
     { categoria: "Distribuição do supply", criterio: "Concentração das 10 maiores contas", nivel: nivelTop10(top10), valor: top10 === null ? "Sem informação" : `${top10}% do supply` },
     (() => {
-      const v = Number.isFinite(Number(d["creator_percent"])) ? Number(d["creator_percent"]) : null;
+      const bruto = d["creator_percent"];
+      const informado = bruto !== null && bruto !== undefined && !(typeof bruto === "string" && bruto.trim() === "");
+      const numero = informado ? Number(bruto) : NaN;
+      const v = Number.isFinite(numero) && numero >= 0 ? numero : null;
       return { categoria: "Distribuição do supply", criterio: "Carteira do criador", nivel: v === null ? "desconhecido" : v > 0.05 ? "alto" : "baixo", valor: v === null ? "Sem informação" : `${(v * 100).toFixed(1)}%` };
     })(),
     (() => {
@@ -326,14 +341,22 @@ const PONTOS: Record<Checagem["nivel"], number> = { alto: 15, medio: 6, desconhe
 export function notaRisco(checagens: Checagem[], semSeguranca: boolean): NotaRisco {
   const conta = (n: Checagem["nivel"]) => checagens.filter((c) => c.nivel === n).length;
   const altos = conta("alto"), medios = conta("medio"), desconhecidos = conta("desconhecido");
-  const critico = checagens.some((c) => c.nivel === "alto" && /Honeypot|Freeze|Mint/.test(c.criterio));
-  let nota = altos * 15 + medios * 6 + desconhecidos * 4 + (semSeguranca ? 50 : 0) + (critico ? 25 : 0);
+  const critico = checagens.some((c) => c.nivel === "alto" && /Honeypot|Freeze|Mint/i.test(c.criterio));
+  const semDadosDeChecklist = checagens.length === 0;
+  const semSegurancaEfetiva = semSeguranca || semDadosDeChecklist;
+  let nota = altos * 15 + medios * 6 + desconhecidos * 4 + (semSegurancaEfetiva ? 50 : 0) + (critico ? 25 : 0);
   nota = Math.min(100, nota);
   const itens: ItemNota[] = checagens.map((c) => ({ criterio: c.criterio, categoria: c.categoria, valor: c.valor, nivel: c.nivel, pontos: PONTOS[c.nivel] }));
   if (critico) itens.push({ criterio: "Sinal crítico (honeypot/freeze/mint)", categoria: "Liquidez e contrato", valor: "Agravante aplicado à nota", nivel: "alto", pontos: 25 });
-  if (semSeguranca) itens.push({ criterio: "Sem checagem de segurança", categoria: "Liquidez e contrato", valor: "GoPlus não retornou dados", nivel: "desconhecido", pontos: 50 });
-  const cobertura: NotaRisco["cobertura"] = semSeguranca ? "insuficiente" : desconhecidos >= 3 ? "parcial" : "completa";
-  return { nota, nivel: nota >= 50 ? "alto" : nota >= 20 ? "medio" : "baixo", altos, medios, desconhecidos, alertas: checagens.filter((c) => c.nivel === "alto").map((c) => c.criterio).slice(0, 3), semSeguranca, cobertura, itens };
+  if (semSegurancaEfetiva) itens.push({ criterio: "Sem checagem de segurança", categoria: "Liquidez e contrato", valor: semDadosDeChecklist ? "Nenhuma verificação disponível" : "Fonte de segurança não retornou dados", nivel: "desconhecido", pontos: 50 });
+  const proporcaoDesconhecida = checagens.length ? desconhecidos / checagens.length : 1;
+  const cobertura: NotaRisco["cobertura"] =
+    semSegurancaEfetiva
+      ? "insuficiente"
+      : desconhecidos >= 3 || proporcaoDesconhecida >= 0.25
+        ? "parcial"
+        : "completa";
+  return { nota, nivel: nota >= 50 ? "alto" : nota >= 20 ? "medio" : "baixo", altos, medios, desconhecidos, alertas: checagens.filter((c) => c.nivel === "alto").map((c) => c.criterio).slice(0, 3), semSeguranca: semSegurancaEfetiva, cobertura, itens };
 }
 
 export async function coletarDados(rede: Rede, endereco: string): Promise<DadosToken> {
