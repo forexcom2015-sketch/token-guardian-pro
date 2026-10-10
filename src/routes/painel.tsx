@@ -63,7 +63,7 @@ function Painel() {
               <span>{idade(t.mercado.criadoEm)}</span>
             </div>
             <div className="flex items-baseline gap-3 font-mono text-[11px]">
-              <span className="text-sm text-card-foreground">{t.mercado.precoUsd !== null ? `$${t.mercado.precoUsd < 0.01 ? t.mercado.precoUsd.toExponential(2) : t.mercado.precoUsd.toLocaleString("en-US", { maximumFractionDigits: 4 })}` : "—"}</span>
+              <span className="text-sm text-card-foreground">{t.mercado.precoUsd !== null ? `$${t.mercado.precoUsd.toLocaleString("en-US", { maximumSignificantDigits: 4 })}` : "—"}</span>
               {([["5m", t.mercado.variacao5m], ["1h", t.mercado.variacao1h], ["24h", t.mercado.variacao24h]] as const).map(([rotulo, v]) => (
                 <span key={rotulo} className={v === null ? "text-muted-foreground" : v >= 0 ? "text-signal" : "text-danger"}>
                   {rotulo} {v === null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`}
