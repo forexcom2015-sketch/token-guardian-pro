@@ -1,3 +1,6 @@
+import { CRITERIOS } from "./criterios";
+import { LIQUIDEZ_MINIMA_USD } from "./alerta";
+
 export type Rede = "solana" | "bsc" | "ethereum" | "base";
 
 export const GOPLUS_CHAIN: Record<Exclude<Rede, "solana">, string> = {
@@ -211,11 +214,11 @@ async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string, pre
       const s = sinal(d["cannot_sell_all"]);
       const nivel = h === true || s === true ? "alto" : h === false && s === false ? "baixo" : "desconhecido";
       const valor = h === true ? "Simulação indica honeypot" : s === true ? "Venda parcialmente bloqueada" : h === false && s === false ? "Venda simulada passou" : "Sem informação suficiente";
-      return { categoria: "Liquidez e contrato", criterio: "Honeypot", nivel, valor };
+      return { categoria: "Liquidez e contrato", criterio: CRITERIOS.HONEYPOT, nivel, valor };
     })(),
     (() => {
       const v = sinal(d["is_mintable"]);
-      return { categoria: "Liquidez e contrato", criterio: "Mint oculto", nivel: v === null ? "desconhecido" : v ? "alto" : "baixo", valor: v === null ? "Sem informação" : v ? "Dono pode criar tokens" : "Sem função de mint" };
+      return { categoria: "Liquidez e contrato", criterio: CRITERIOS.MINT_OCULTO, nivel: v === null ? "desconhecido" : v ? "alto" : "baixo", valor: v === null ? "Sem informação" : v ? "Dono pode criar tokens" : "Sem função de mint" };
     })(),
     (() => {
       const b = sinal(d["is_blacklisted"]);
@@ -301,8 +304,8 @@ async function segurancaSolana(endereco: string, pre?: GoPlusMapa) {
     if (onchain.mintAtivo === null && onchain.top10Pct === null) return null;
     const checagens: Checagem[] = [
       { categoria: "Liquidez e contrato", criterio: "Status da liquidez (LP)", nivel: "desconhecido", valor: "DESCONHECIDA — sem dados verificáveis de LP; pode ser bonding curve ou pool sem registro" },
-      { categoria: "Liquidez e contrato", criterio: "Mint authority", nivel: onchain.mintAtivo === null ? "desconhecido" : onchain.mintAtivo ? "alto" : "baixo", valor: onchain.mintAtivo === null ? "?" : onchain.mintAtivo ? "Ativa — podem criar tokens" : "Revogada" },
-      { categoria: "Liquidez e contrato", criterio: "Freeze authority", nivel: onchain.freezeAtivo === null ? "desconhecido" : onchain.freezeAtivo ? "alto" : "baixo", valor: onchain.freezeAtivo === null ? "?" : onchain.freezeAtivo ? "Ativa — podem congelar carteiras (honeypot)" : "Revogada" },
+      { categoria: "Liquidez e contrato", criterio: CRITERIOS.MINT_AUTHORITY, nivel: onchain.mintAtivo === null ? "desconhecido" : onchain.mintAtivo ? "alto" : "baixo", valor: onchain.mintAtivo === null ? "?" : onchain.mintAtivo ? "Ativa — podem criar tokens" : "Revogada" },
+      { categoria: "Liquidez e contrato", criterio: CRITERIOS.FREEZE_AUTHORITY, nivel: onchain.freezeAtivo === null ? "desconhecido" : onchain.freezeAtivo ? "alto" : "baixo", valor: onchain.freezeAtivo === null ? "?" : onchain.freezeAtivo ? "Ativa — podem congelar carteiras (honeypot)" : "Revogada" },
       { categoria: "Distribuição do supply", criterio: "Top 10 carteiras", nivel: nivelTop10(onchain.top10Pct), valor: onchain.top10Pct === null ? "?" : `${onchain.top10Pct}% do supply` },
     ];
     return { checagens, holders: null, top10: onchain.top10Pct, nome: null, simbolo: null, fonte: "Solana RPC" };
@@ -327,13 +330,13 @@ async function segurancaSolana(endereco: string, pre?: GoPlusMapa) {
   return { checagens, holders: Number(d["holder_count"] ?? 0) || null, top10, nome: meta?.name ?? null, simbolo: meta?.symbol ?? null, fonte: "GoPlus Security" };
 }
 
-function checagensMercado(p: ParMercado): Checagem[] {
+function checagensMercado(p: ParMercado, rede: Rede): Checagem[] {
   const liq = p.liquidezUsd ?? 0;
   const razao = p.fdv && liq ? liq / p.fdv : null;
   return [
     p.liquidezUsd === null
       ? { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: "desconhecido", valor: `Sem pool de liquidez ainda (${p.dex === "pumpfun" ? "na curva de bonding do pump.fun" : "DexScreener não informa"})` }
-      : { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: liq < 10000 ? "alto" : liq < 50000 ? "medio" : "baixo", valor: `$${Math.round(liq).toLocaleString("en-US")}${razao ? ` (${(razao * 100).toFixed(1)}% do FDV)` : ""}` },
+      : { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: liq < 10000 ? "alto" : liq < LIQUIDEZ_MINIMA_USD[rede] ? "medio" : "baixo", valor: `$${Math.round(liq).toLocaleString("en-US")}${razao ? ` (${(razao * 100).toFixed(1)}% do FDV)` : ""}` },
     { categoria: "Comportamento on-chain", criterio: "Compras vs vendas (24h)", nivel: p.compras24h === null || p.vendas24h === null ? "desconhecido" : p.vendas24h === 0 && p.compras24h > 20 ? "medio" : "baixo", valor: p.compras24h === null || p.vendas24h === null ? "Sem dados de transações" : `${p.compras24h} compras / ${p.vendas24h} vendas${p.vendas24h === 0 && p.compras24h > 20 ? " — ausência de vendas observadas; verificar capacidade de venda" : ""}` },
     { categoria: "Comportamento on-chain", criterio: "Volume vs liquidez", nivel: p.volume24h === null || !liq ? "desconhecido" : p.volume24h / liq > 30 ? "medio" : "baixo", valor: p.volume24h === null ? "Sem dados de volume" : `Volume 24h ${Math.round(p.volume24h).toLocaleString("en-US")}` },
   ];
@@ -372,7 +375,7 @@ export async function coletarDados(rede: Rede, endereco: string): Promise<DadosT
     rede === "solana" ? segurancaSolana(endereco) : segurancaEvm(rede, endereco),
   ]);
   const dex = pares.get(endereco.toLowerCase());
-  const checagens = [...(seg?.checagens ?? []), ...(dex ? checagensMercado(dex.par) : [])];
+  const checagens = [...(seg?.checagens ?? []), ...(dex ? checagensMercado(dex.par, rede) : [])];
   return {
     rede,
     endereco,
@@ -423,7 +426,7 @@ async function lancamentosSemCache(redes: Rede[]) {
         const d = pares.get(l.tokenAddress.toLowerCase());
         if (!d) continue;
         const seg = rede === "solana" ? await segurancaSolana(l.tokenAddress, gp) : await segurancaEvm(rede, l.tokenAddress, gp);
-        const risco = notaRisco([...(seg?.checagens ?? []), ...checagensMercado(d.par)], !seg);
+        const risco = notaRisco([...(seg?.checagens ?? []), ...checagensMercado(d.par, rede)], !seg);
         resultado.push({ rede, endereco: l.tokenAddress, nome: d.nome, simbolo: d.simbolo, icone: l.icon ?? null, descricao: l.description ?? null, mercado: d.par, risco });
       }
     }),
