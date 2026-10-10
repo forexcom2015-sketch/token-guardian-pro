@@ -90,7 +90,21 @@ function Painel() {
                 ))}
               </ul>
             </details>
+            {t.mercado.parAddress ? (
+              <iframe
+                key={`${t.rede}/${t.mercado.parAddress}`}
+                src={`https://dexscreener.com/${t.rede}/${encodeURIComponent(t.mercado.parAddress)}?embed=1&theme=dark&trades=0&info=0`}
+                title={`Gráfico DexScreener de ${t.simbolo ?? t.nome ?? t.endereco}`}
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allow="fullscreen"
+                className="h-[380px] w-full min-w-0 rounded border border-border bg-background"
+              />
+            ) : (
+              <p className="text-[11px] text-muted-foreground">Gráfico indisponível: nenhum par de negociação encontrado.</p>
+            )}
             <div className="flex gap-3 text-[11px]">
+              {t.mercado.parAddress && <a href={`https://dexscreener.com/${t.rede}/${encodeURIComponent(t.mercado.parAddress)}`} target="_blank" rel="noreferrer" className="text-signal hover:underline">Abrir gráfico</a>}
               {linksToken(t.rede, t.endereco).map((l) => <a key={l.rotulo} href={l.url} target="_blank" rel="noreferrer" className="text-signal hover:underline">{l.rotulo}</a>)}
             </div>
           </li>
