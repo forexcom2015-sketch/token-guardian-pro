@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Embed DexScreener charts directly from each token's market pair address with lazy-loaded iframes; this preserves the provider's live chart without inventing historical price data.
+- Keep MetaMask connection in a browser-only shared header control using EIP-6963 discovery and injected-provider fallback; request account access only on user action and never initiate payments, signatures, or transactions as part of connection.
