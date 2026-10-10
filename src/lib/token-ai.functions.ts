@@ -147,9 +147,23 @@ export const analisarReal = createServerFn({ method: "POST" })
   });
 
 export const listarLancamentos = createServerFn({ method: "GET" }).handler(async () => {
-  const { lancamentosRecentes } = await import("./onchain.server");
+  const atualizadoEm = new Date().toISOString();
   const redes: Rede[] = ["solana", "bsc", "ethereum", "base"];
-  return { tokens: await lancamentosRecentes(redes), atualizadoEm: new Date().toISOString() };
+
+  try {
+    const { lancamentosRecentes } = await import("./onchain.server");
+    const tokens = await lancamentosRecentes(redes);
+    return { tokens, atualizadoEm: new Date().toISOString(), erro: null };
+  } catch (error) {
+    // Keep the public page usable when a third-party feed or network fails.
+    // Log details on the server only; do not expose provider responses to visitors.
+    console.error("[listarLancamentos] Falha ao carregar lançamentos:", error);
+    return {
+      tokens: [],
+      atualizadoEm,
+      erro: "Não foi possível carregar os lançamentos agora. Tente novamente em instantes.",
+    };
+  }
 });
 
 /** Checklist de segurança sob demanda, sem chamada à IA nem consumo de créditos de IA. */
