@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      alertas_seguranca: {
+        Row: {
+          endereco: string
+          first_seen_at: string
+          last_seen_at: string
+          liquidez_usd: number | null
+          nome: string | null
+          nota: number
+          par_criado_em: string | null
+          rede: string
+          simbolo: string | null
+        }
+        Insert: {
+          endereco: string
+          first_seen_at?: string
+          last_seen_at?: string
+          liquidez_usd?: number | null
+          nome?: string | null
+          nota: number
+          par_criado_em?: string | null
+          rede: string
+          simbolo?: string | null
+        }
+        Update: {
+          endereco?: string
+          first_seen_at?: string
+          last_seen_at?: string
+          liquidez_usd?: number | null
+          nome?: string | null
+          nota?: number
+          par_criado_em?: string | null
+          rede?: string
+          simbolo?: string | null
+        }
+        Relationships: []
+      }
       analises: {
         Row: {
           analise: Json
@@ -98,6 +134,10 @@ export type Database = {
       consumir_limite_requisicoes: {
         Args: { p_chave: string; p_janela_segundos: number; p_limite: number }
         Returns: boolean
+      }
+      registrar_alertas: {
+        Args: { p_alertas: Json }
+        Returns: number
       }
     }
     Enums: {
