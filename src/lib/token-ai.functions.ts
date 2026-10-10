@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 
 /** Persistent, atomic limits stored in Postgres; never falls back to process memory. */
-async function limitarUso(acao: "analise-ia" | "checklist-seguranca", limite: number, janelaSegundos: number) {
+async function limitarUso(acao: "analise-ia" | "checklist-seguranca" | "historico-alertas", limite: number, janelaSegundos: number) {
   const request = getRequest();
   // Cloudflare sets this header at the edge. Do not trust arbitrary forwarded-IP headers.
   const ip = request?.headers.get("cf-connecting-ip")?.trim();
@@ -96,6 +96,7 @@ function extrairJson<T>(texto: string): T {
 }
 
 import type { DadosToken, NotaRisco, Rede } from "./onchain.server";
+import { avaliarAlerta } from "./alerta";
 import { entradaTokenSchema } from "./enderecos";
 import { detectarManipulacao, type AnaliseManipulacao } from "./manipulacao";
 import type { AnaliseTransacoes } from "./analise-transacoes.server";
@@ -152,11 +153,26 @@ export const listarLancamentos = createServerFn({ method: "GET" }).handler(async
 
   try {
     const { lancamentosRecentes } = await import("./onchain.server");
-    const tokens = await lancamentosRecentes(redes);
+    const brutos = await lancamentosRecentes(redes);
+    const agora = Date.now();
+    const tokens = brutos.map((t) => ({
+      ...t,
+      alerta: avaliarAlerta(
+        { rede: t.rede, liquidezUsd: t.mercado.liquidezUsd, criadoEm: t.mercado.criadoEm, risco: t.risco },
+        agora,
+      ),
+    }));
+
+    // Falha ao registrar não pode derrubar a página pública. Aguardar é necessário em Workers.
+    try {
+      const { registrarAlertas } = await import("./alerta.server");
+      await registrarAlertas(tokens.filter((t) => t.alerta.elegivel));
+    } catch (e) {
+      console.error("[listarLancamentos] Falha ao registrar alertas:", e);
+    }
+
     return { tokens, atualizadoEm: new Date().toISOString(), erro: null };
   } catch (error) {
-    // Keep the public page usable when a third-party feed or network fails.
-    // Log details on the server only; do not expose provider responses to visitors.
     console.error("[listarLancamentos] Falha ao carregar lançamentos:", error);
     return {
       tokens: [],
@@ -164,6 +180,12 @@ export const listarLancamentos = createServerFn({ method: "GET" }).handler(async
       erro: "Não foi possível carregar os lançamentos agora. Tente novamente em instantes.",
     };
   }
+});
+
+export const historicoAlertas = createServerFn({ method: "GET" }).handler(async () => {
+  await limitarUso("historico-alertas", 30, 10 * 60);
+  const { lerHistoricoAlertas } = await import("./alerta.server");
+  return lerHistoricoAlertas();
 });
 
 /** Checklist de segurança sob demanda, sem chamada à IA nem consumo de créditos de IA. */
