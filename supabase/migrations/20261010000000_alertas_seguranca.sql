@@ -39,14 +39,14 @@ begin
     (a->>'nota')::integer,
     nullif(a->>'liquidez_usd', '')::numeric,
     nullif(a->>'par_criado_em', '')::timestamptz
-  from jsonb_array_elements(p_alertas) as a
+  from jsonb_array_elements(p_alertas) as items(a)
   on conflict (rede, endereco) do update set
     simbolo = excluded.simbolo,
     nome = excluded.nome,
     nota = excluded.nota,
     liquidez_usd = excluded.liquidez_usd,
     last_seen_at = now()
-  where public.alertas_seguranca.last_seen_at < now() - interval '5 minutes';
+  where alertas_seguranca.last_seen_at < now() - interval '5 minutes';
 
   get diagnostics v_count = row_count;
   return v_count;
