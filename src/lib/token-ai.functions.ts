@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 
 /** Persistent, atomic limits stored in Postgres; never falls back to process memory. */
-async function limitarUso(acao: "analise-ia" | "checklist-seguranca" | "historico-alertas", limite: number, janelaSegundos: number) {
+async function limitarUso(acao: "analise-ia" | "checklist-seguranca", limite: number, janelaSegundos: number) {
   const request = getRequest();
   // Cloudflare sets this header at the edge. Do not trust arbitrary forwarded-IP headers.
   const ip = request?.headers.get("cf-connecting-ip")?.trim();
@@ -96,7 +96,6 @@ function extrairJson<T>(texto: string): T {
 }
 
 import type { DadosToken, NotaRisco, Rede } from "./onchain.server";
-import { avaliarAlerta } from "./alerta";
 import { entradaTokenSchema } from "./enderecos";
 import { detectarManipulacao, type AnaliseManipulacao } from "./manipulacao";
 import type { AnaliseTransacoes } from "./analise-transacoes.server";
@@ -148,44 +147,14 @@ export const analisarReal = createServerFn({ method: "POST" })
   });
 
 export const listarLancamentos = createServerFn({ method: "GET" }).handler(async () => {
-  const atualizadoEm = new Date().toISOString();
-  const redes: Rede[] = ["solana", "bsc", "ethereum", "base"];
-
   try {
     const { lancamentosRecentes } = await import("./onchain.server");
-    const brutos = await lancamentosRecentes(redes);
-    const agora = Date.now();
-    const tokens = brutos.map((t) => ({
-      ...t,
-      alerta: avaliarAlerta(
-        { rede: t.rede, liquidezUsd: t.mercado.liquidezUsd, criadoEm: t.mercado.criadoEm, risco: t.risco },
-        agora,
-      ),
-    }));
-
-    // Falha ao registrar não pode derrubar a página pública. Aguardar é necessário em Workers.
-    try {
-      const { registrarAlertas } = await import("./alerta.server");
-      await registrarAlertas(tokens.filter((t) => t.alerta.elegivel));
-    } catch (e) {
-      console.error("[listarLancamentos] Falha ao registrar alertas:", e);
-    }
-
-    return { tokens, atualizadoEm: new Date().toISOString(), erro: null };
+    const redes: Rede[] = ["solana", "bsc", "ethereum", "base"];
+    return { tokens: await lancamentosRecentes(redes), atualizadoEm: new Date().toISOString(), indisponivel: false };
   } catch (error) {
-    console.error("[listarLancamentos] Falha ao carregar lançamentos:", error);
-    return {
-      tokens: [],
-      atualizadoEm,
-      erro: "Não foi possível carregar os lançamentos agora. Tente novamente em instantes.",
-    };
+    console.error("[Lançamentos] Falha ao consultar fontes externas.", error instanceof Error ? error.message : error);
+    return { tokens: [], atualizadoEm: new Date().toISOString(), indisponivel: true };
   }
-});
-
-export const historicoAlertas = createServerFn({ method: "GET" }).handler(async () => {
-  await limitarUso("historico-alertas", 30, 10 * 60);
-  const { lerHistoricoAlertas } = await import("./alerta.server");
-  return lerHistoricoAlertas();
 });
 
 /** Checklist de segurança sob demanda, sem chamada à IA nem consumo de créditos de IA. */

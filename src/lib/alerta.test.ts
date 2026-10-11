@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { notaRisco, type Checagem, type Rede } from "./onchain.server";
-import { CRITERIOS } from "./criterios";
 import {
-  avaliarAlerta,
   elegivelParaAlerta,
-  IDADE_MINIMA_HORAS,
   LIQUIDEZ_MINIMA_USD,
   motivosDeExclusao,
   segurancaPct,
@@ -20,7 +17,7 @@ const c = (criterio: string, nivel: Checagem["nivel"]): Checagem => ({
 
 const criticosSolana = [c("Mint authority", "baixo"), c("Freeze authority", "baixo")];
 const criticosEvm = [c("Honeypot", "baixo"), c("Mint oculto", "baixo")];
-const base: { rede: Rede; liquidezUsd: number | null; criadoEm?: number | null } = { rede: "solana", liquidezUsd: 60_000 };
+const base: { rede: Rede; liquidezUsd: number | null } = { rede: "solana", liquidezUsd: 60_000 };
 const cand = (
   checagens: Checagem[],
   extra: Partial<typeof base> = {},
@@ -97,38 +94,6 @@ describe("alerta de alta segurança", () => {
   it("aplica mínimo de liquidez diferente por rede", () => {
     expect(elegivelParaAlerta(cand(criticosSolana, { rede: "solana", liquidezUsd: 30_000 }))).toBe(true);
     expect(elegivelParaAlerta(cand(criticosEvm, { rede: "ethereum", liquidezUsd: 30_000 }))).toBe(false);
-    expect(LIQUIDEZ_MINIMA_USD.ethereum).toBe(50_000);
-  });
-
-  it("rejeita par com menos de 24h e aceita par mais antigo", () => {
-    const agora = Date.now();
-    expect(elegivelParaAlerta(cand(criticosSolana, { criadoEm: agora - 2 * 3_600_000 }), agora)).toBe(false);
-    expect(elegivelParaAlerta(cand(criticosSolana, { criadoEm: agora - 48 * 3_600_000 }), agora)).toBe(true);
-  });
-
-  it("rejeita idade desconhecida ou futura quando o campo é informado", () => {
-    expect(elegivelParaAlerta(cand(criticosSolana, { criadoEm: null }))).toBe(false);
-    expect(elegivelParaAlerta(cand(criticosSolana, { criadoEm: Date.now() + 3_600_000 }))).toBe(false);
-  });
-
-  it("informa qual verificação crítica falhou", () => {
-    const motivos = motivosDeExclusao(
-      cand([c(CRITERIOS.MINT_AUTHORITY, "desconhecido"), c(CRITERIOS.FREEZE_AUTHORITY, "baixo")]),
-    );
-    expect(motivos).toContain("Verificação crítica reprovada ou desconhecida");
-    expect(motivos).toContain("Detalhe: Mint authority (desconhecido)");
-  });
-
-  it("avaliarAlerta devolve elegível e motivos coerentes", () => {
-    expect(avaliarAlerta(cand(criticosSolana))).toEqual({ elegivel: true, motivos: [] });
-    const r = avaliarAlerta(cand(criticosSolana, { liquidezUsd: 1_000 }));
-    expect(r.elegivel).toBe(false);
-    expect(r.motivos.length).toBeGreaterThan(0);
-  });
-
-  it("usa mínimo de $25k fora da Ethereum e $50k na Ethereum", () => {
-    expect(IDADE_MINIMA_HORAS).toBe(24);
-    expect(LIQUIDEZ_MINIMA_USD.bsc).toBe(25_000);
     expect(LIQUIDEZ_MINIMA_USD.ethereum).toBe(50_000);
   });
 

@@ -1,6 +1,3 @@
-import { CRITERIOS } from "./criterios";
-import { LIQUIDEZ_MINIMA_USD } from "./alerta";
-
 export type Rede = "solana" | "bsc" | "ethereum" | "base";
 
 export const GOPLUS_CHAIN: Record<Exclude<Rede, "solana">, string> = {
@@ -20,7 +17,6 @@ export type ParMercado = {
   dex: string;
   parAddress: string | null;
   url: string;
-  siteOficial: string | null;
   precoUsd: number | null;
   liquidezUsd: number | null;
   fdv: number | null;
@@ -51,7 +47,6 @@ type DexPair = {
   pairAddress?: string;
   dexId: string;
   url: string;
-  info?: { websites?: { url?: string; label?: string }[] };
   baseToken: { address: string; name: string; symbol: string };
   priceUsd?: string;
   liquidity?: { usd?: number };
@@ -64,7 +59,10 @@ type DexPair = {
 
 async function getJson<T>(url: string): Promise<T | null> {
   try {
-    const r = await fetch(url, { headers: { accept: "application/json" } });
+    const r = await fetch(url, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!r.ok) return null;
     return (await r.json()) as T;
   } catch {
@@ -77,7 +75,6 @@ function paraPar(p: DexPair): ParMercado {
     dex: p.dexId,
     parAddress: p.pairAddress ?? null,
     url: p.url,
-    siteOficial: p.info?.websites?.map((s) => s.url).find((u) => typeof u === "string" && /^https?:\/\//i.test(u)) ?? null,
     precoUsd: p.priceUsd ? Number(p.priceUsd) : null,
     liquidezUsd: p.liquidity?.usd ?? null,
     fdv: p.fdv ?? null,
@@ -164,7 +161,7 @@ async function goplusSolanaUm(endereco: string): Promise<Record<string, unknown>
       cacheGoplus.set(k, { em: Date.now(), dado });
       return dado;
     }
-    await espera(800 * (tentativa + 1));
+    if (tentativa < 2) await espera(800 * (tentativa + 1));
   }
   return null;
 }
@@ -204,7 +201,7 @@ async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string, pre
   const taxaNivel = (t: number): Checagem["nivel"] => (isNaN(t) ? "desconhecido" : t > 10 ? "alto" : t > 5 ? "medio" : "baixo");
   const top10 = somaTop10(d["holders"] as Holder[], 100);
   const checagens: Checagem[] = [
-    { categoria: "Liquidez e contrato", criterio: "Status da liquidez (LP)", nivel: lp.length ? (lpTravada >= 90 ? "baixo" : lpTravada >= 50 ? "medio" : "alto") : "desconhecido", valor: lp.length ? (lpTravada >= 90 ? `PROTEGIDA — ${lpTravada}% travado/queimado` : lpTravada > 0 ? `PARCIAL — ${lpTravada}% travado/queimado; restante potencialmente removível` : "ABERTA — nenhum LP travado/queimado identificado") : "DESCONHECIDA — fonte não retornou dados de LP" },
+    { categoria: "Liquidez e contrato", criterio: "Liquidez travada/queimada", nivel: lp.length ? (lpTravada >= 90 ? "baixo" : lpTravada >= 50 ? "medio" : "alto") : "desconhecido", valor: lp.length ? `${lpTravada}% do LP travado ou queimado` : "Sem dados de LP" },
     (() => {
       const v = sinal(d["is_open_source"]);
       return { categoria: "Liquidez e contrato", criterio: "Contrato verificado", nivel: v === null ? "desconhecido" : v ? "baixo" : "alto", valor: v === null ? "Sem informação" : v ? "Código aberto" : "Código não verificado" };
@@ -214,11 +211,11 @@ async function segurancaEvm(rede: Exclude<Rede, "solana">, endereco: string, pre
       const s = sinal(d["cannot_sell_all"]);
       const nivel = h === true || s === true ? "alto" : h === false && s === false ? "baixo" : "desconhecido";
       const valor = h === true ? "Simulação indica honeypot" : s === true ? "Venda parcialmente bloqueada" : h === false && s === false ? "Venda simulada passou" : "Sem informação suficiente";
-      return { categoria: "Liquidez e contrato", criterio: CRITERIOS.HONEYPOT, nivel, valor };
+      return { categoria: "Liquidez e contrato", criterio: "Honeypot", nivel, valor };
     })(),
     (() => {
       const v = sinal(d["is_mintable"]);
-      return { categoria: "Liquidez e contrato", criterio: CRITERIOS.MINT_OCULTO, nivel: v === null ? "desconhecido" : v ? "alto" : "baixo", valor: v === null ? "Sem informação" : v ? "Dono pode criar tokens" : "Sem função de mint" };
+      return { categoria: "Liquidez e contrato", criterio: "Mint oculto", nivel: v === null ? "desconhecido" : v ? "alto" : "baixo", valor: v === null ? "Sem informação" : v ? "Dono pode criar tokens" : "Sem função de mint" };
     })(),
     (() => {
       const b = sinal(d["is_blacklisted"]);
@@ -303,9 +300,9 @@ async function segurancaSolana(endereco: string, pre?: GoPlusMapa) {
     // GoPlus sem dados: pontua mesmo assim com o que a blockchain informa.
     if (onchain.mintAtivo === null && onchain.top10Pct === null) return null;
     const checagens: Checagem[] = [
-      { categoria: "Liquidez e contrato", criterio: "Status da liquidez (LP)", nivel: "desconhecido", valor: "DESCONHECIDA — sem dados verificáveis de LP; pode ser bonding curve ou pool sem registro" },
-      { categoria: "Liquidez e contrato", criterio: CRITERIOS.MINT_AUTHORITY, nivel: onchain.mintAtivo === null ? "desconhecido" : onchain.mintAtivo ? "alto" : "baixo", valor: onchain.mintAtivo === null ? "?" : onchain.mintAtivo ? "Ativa — podem criar tokens" : "Revogada" },
-      { categoria: "Liquidez e contrato", criterio: CRITERIOS.FREEZE_AUTHORITY, nivel: onchain.freezeAtivo === null ? "desconhecido" : onchain.freezeAtivo ? "alto" : "baixo", valor: onchain.freezeAtivo === null ? "?" : onchain.freezeAtivo ? "Ativa — podem congelar carteiras (honeypot)" : "Revogada" },
+      { categoria: "Liquidez e contrato", criterio: "Liquidez queimada/travada", nivel: "desconhecido", valor: "Sem dados (curva de bonding ou pool sem registro)" },
+      { categoria: "Liquidez e contrato", criterio: "Mint authority", nivel: onchain.mintAtivo === null ? "desconhecido" : onchain.mintAtivo ? "alto" : "baixo", valor: onchain.mintAtivo === null ? "?" : onchain.mintAtivo ? "Ativa — podem criar tokens" : "Revogada" },
+      { categoria: "Liquidez e contrato", criterio: "Freeze authority", nivel: onchain.freezeAtivo === null ? "desconhecido" : onchain.freezeAtivo ? "alto" : "baixo", valor: onchain.freezeAtivo === null ? "?" : onchain.freezeAtivo ? "Ativa — podem congelar carteiras (honeypot)" : "Revogada" },
       { categoria: "Distribuição do supply", criterio: "Top 10 carteiras", nivel: nivelTop10(onchain.top10Pct), valor: onchain.top10Pct === null ? "?" : `${onchain.top10Pct}% do supply` },
     ];
     return { checagens, holders: null, top10: onchain.top10Pct, nome: null, simbolo: null, fonte: "Solana RPC" };
@@ -319,7 +316,7 @@ async function segurancaSolana(endereco: string, pre?: GoPlusMapa) {
   const feePct = fee?.fee_rate?.[0]?.fee_points !== undefined ? Number(fee.fee_rate[0].fee_points) / 100 : null;
   const meta = d["metadata"] as { name?: string; symbol?: string } | undefined;
   const checagens: Checagem[] = [
-    { categoria: "Liquidez e contrato", criterio: "Status da liquidez (LP)", nivel: burn === null ? "desconhecido" : burn >= 90 ? "baixo" : burn >= 50 ? "medio" : "alto", valor: burn === null ? "DESCONHECIDA — sem dados verificáveis de LP; pode ser bonding curve ou pool sem registro" : burn >= 90 ? `PROTEGIDA — ${burn}% do LP queimado segundo a fonte` : burn > 0 ? `PARCIAL — ${burn}% do LP queimado; restante pode ser removível` : "ABERTA — nenhum LP queimado identificado; bloqueio não confirmado" },
+    { categoria: "Liquidez e contrato", criterio: "Liquidez queimada/travada", nivel: burn === null ? "desconhecido" : burn >= 90 ? "baixo" : burn >= 50 ? "medio" : "alto", valor: burn === null ? "Sem dados (curva de bonding ou pool sem registro)" : `${burn}% do LP queimado` },
     { categoria: "Liquidez e contrato", criterio: "Mint authority", nivel: st("mintable") === null ? "desconhecido" : st("mintable") ? "alto" : "baixo", valor: st("mintable") === null ? "Sem informação" : st("mintable") ? "Ativa — podem criar tokens" : "Revogada" },
     { categoria: "Liquidez e contrato", criterio: "Freeze authority", nivel: st("freezable") === null ? "desconhecido" : st("freezable") ? "alto" : "baixo", valor: st("freezable") === null ? "Sem informação" : st("freezable") ? "Ativa — podem congelar carteiras" : "Revogada" },
     { categoria: "Liquidez e contrato", criterio: "Metadata alterável", nivel: st("metadata_mutable") === null ? "desconhecido" : st("metadata_mutable") ? "medio" : "baixo", valor: st("metadata_mutable") === null ? "Sem informação" : st("metadata_mutable") ? "Pode ser alterada" : "Imutável" },
@@ -330,13 +327,13 @@ async function segurancaSolana(endereco: string, pre?: GoPlusMapa) {
   return { checagens, holders: Number(d["holder_count"] ?? 0) || null, top10, nome: meta?.name ?? null, simbolo: meta?.symbol ?? null, fonte: "GoPlus Security" };
 }
 
-function checagensMercado(p: ParMercado, rede: Rede): Checagem[] {
+function checagensMercado(p: ParMercado): Checagem[] {
   const liq = p.liquidezUsd ?? 0;
   const razao = p.fdv && liq ? liq / p.fdv : null;
   return [
     p.liquidezUsd === null
       ? { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: "desconhecido", valor: `Sem pool de liquidez ainda (${p.dex === "pumpfun" ? "na curva de bonding do pump.fun" : "DexScreener não informa"})` }
-      : { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: liq < 10000 ? "alto" : liq < LIQUIDEZ_MINIMA_USD[rede] ? "medio" : "baixo", valor: `$${Math.round(liq).toLocaleString("en-US")}${razao ? ` (${(razao * 100).toFixed(1)}% do FDV)` : ""}` },
+      : { categoria: "Liquidez e contrato", criterio: "Liquidez em USD", nivel: liq < 10000 ? "alto" : liq < 50000 ? "medio" : "baixo", valor: `$${Math.round(liq).toLocaleString("en-US")}${razao ? ` (${(razao * 100).toFixed(1)}% do FDV)` : ""}` },
     { categoria: "Comportamento on-chain", criterio: "Compras vs vendas (24h)", nivel: p.compras24h === null || p.vendas24h === null ? "desconhecido" : p.vendas24h === 0 && p.compras24h > 20 ? "medio" : "baixo", valor: p.compras24h === null || p.vendas24h === null ? "Sem dados de transações" : `${p.compras24h} compras / ${p.vendas24h} vendas${p.vendas24h === 0 && p.compras24h > 20 ? " — ausência de vendas observadas; verificar capacidade de venda" : ""}` },
     { categoria: "Comportamento on-chain", criterio: "Volume vs liquidez", nivel: p.volume24h === null || !liq ? "desconhecido" : p.volume24h / liq > 30 ? "medio" : "baixo", valor: p.volume24h === null ? "Sem dados de volume" : `Volume 24h ${Math.round(p.volume24h).toLocaleString("en-US")}` },
   ];
@@ -375,7 +372,7 @@ export async function coletarDados(rede: Rede, endereco: string): Promise<DadosT
     rede === "solana" ? segurancaSolana(endereco) : segurancaEvm(rede, endereco),
   ]);
   const dex = pares.get(endereco.toLowerCase());
-  const checagens = [...(seg?.checagens ?? []), ...(dex ? checagensMercado(dex.par, rede) : [])];
+  const checagens = [...(seg?.checagens ?? []), ...(dex ? checagensMercado(dex.par) : [])];
   return {
     rede,
     endereco,
@@ -422,13 +419,13 @@ async function lancamentosSemCache(redes: Rede[]) {
     [...porRede.entries()].map(async ([rede, lista]) => {
       const ends = lista.map((l) => l.tokenAddress).slice(0, 30);
       const [pares, gp] = await Promise.all([paresDex(rede, ends), goplusLote(rede, ends)]);
-      for (const l of lista) {
+      await Promise.all(lista.map(async (l) => {
         const d = pares.get(l.tokenAddress.toLowerCase());
-        if (!d) continue;
+        if (!d) return;
         const seg = rede === "solana" ? await segurancaSolana(l.tokenAddress, gp) : await segurancaEvm(rede, l.tokenAddress, gp);
-        const risco = notaRisco([...(seg?.checagens ?? []), ...checagensMercado(d.par, rede)], !seg);
+        const risco = notaRisco([...(seg?.checagens ?? []), ...checagensMercado(d.par)], !seg);
         resultado.push({ rede, endereco: l.tokenAddress, nome: d.nome, simbolo: d.simbolo, icone: l.icon ?? null, descricao: l.description ?? null, mercado: d.par, risco });
-      }
+      }));
     }),
   );
   return resultado

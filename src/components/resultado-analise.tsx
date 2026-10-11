@@ -19,10 +19,6 @@ export function ResultadoAnalise({ analise }: { analise: AnaliseReal }) {
               {dados.nome ?? "Token"} <span className="font-mono text-sm text-muted-foreground">{dados.simbolo}</span>
             </h2>
             <div className="mt-1 break-all font-mono text-[11px] text-muted-foreground">{dados.endereco}</div>
-            <div className="mt-2 flex flex-wrap gap-3 text-xs">
-              {m?.siteOficial ? <a href={m.siteOficial} target="_blank" rel="noreferrer noopener" className="text-signal hover:underline">Site do projeto ↗</a> : <span className="text-muted-foreground">Site oficial: não identificado pela fonte de mercado</span>}
-              {m?.url ? <a href={m.url} target="_blank" rel="noreferrer noopener" className="text-signal hover:underline">Abrir par / liquidez ↗</a> : null}
-            </div>
             <div className="mt-2 flex gap-3 text-xs">
               {linksToken(dados.rede, dados.endereco).map((l) => (
                 <a key={l.rotulo} href={l.url} target="_blank" rel="noreferrer" className="text-signal hover:underline">{l.rotulo} ↗</a>

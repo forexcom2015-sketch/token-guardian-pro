@@ -135,10 +135,7 @@ export type Database = {
         Args: { p_chave: string; p_janela_segundos: number; p_limite: number }
         Returns: boolean
       }
-      registrar_alertas: {
-        Args: { p_alertas: Json }
-        Returns: number
-      }
+      registrar_alertas: { Args: { p_alertas: Json }; Returns: number }
     }
     Enums: {
       [_ in never]: never

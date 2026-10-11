@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { idade, linksToken, nomesRede, usd } from "@/lib/historico";
 import type { NotaRisco, Rede } from "@/lib/onchain.server";
-import { IDADE_MINIMA_HORAS, SEGURANCA_MINIMA, segurancaPct, type AvaliacaoAlerta } from "@/lib/alerta";
-export { SEGURANCA_MINIMA, segurancaPct } from "@/lib/alerta";
+import { elegivelParaAlerta, SEGURANCA_MINIMA, segurancaPct } from "@/lib/alerta";
+export { SEGURANCA_MINIMA, segurancaPct, emFaixaDeAlerta } from "@/lib/alerta";
 
 export type TokenAlerta = {
   rede: Rede;
@@ -12,12 +12,12 @@ export type TokenAlerta = {
   icone: string | null;
   mercado: { liquidezUsd: number | null; criadoEm: number | null };
   risco: NotaRisco;
-  /** Calculado no servidor em listarLancamentos. */
-  alerta: AvaliacaoAlerta;
 };
 
 export function AlertaSeguranca({ tokens }: { tokens: TokenAlerta[] }) {
-  const alvo = tokens.filter((t) => t.alerta.elegivel);
+  const alvo = tokens.filter((t) =>
+    elegivelParaAlerta({ rede: t.rede, liquidezUsd: t.mercado.liquidezUsd, risco: t.risco }),
+  );
   if (!alvo.length) return null;
 
   return (
@@ -29,7 +29,7 @@ export function AlertaSeguranca({ tokens }: { tokens: TokenAlerta[] }) {
         </span>
         <div className="mr-auto">
           <div className="label-eyebrow text-signal">Alerta</div>
-          <h2 className="text-sm font-semibold text-card-foreground">Pontuação de segurança {SEGURANCA_MINIMA}% a 100%</h2>
+          <h2 className="text-sm font-semibold text-card-foreground">Alta segurança · {SEGURANCA_MINIMA}% a 100%</h2>
         </div>
         <span className="text-xs text-muted-foreground">{alvo.length} {alvo.length === 1 ? "token" : "tokens"} na faixa</span>
       </div>
@@ -45,7 +45,7 @@ export function AlertaSeguranca({ tokens }: { tokens: TokenAlerta[] }) {
                 <div className="truncate text-[11px] text-muted-foreground">{t.nome}</div>
               </div>
               <div className="text-right">
-                <div className="font-mono text-sm font-semibold text-signal">pontuação {segurancaPct(t.risco.nota)}%</div>
+                <div className="font-mono text-sm font-semibold text-signal">{segurancaPct(t.risco.nota)}% segurança</div>
                 <div className="font-mono text-[10px] text-muted-foreground">risco {t.risco.nota}/100</div>
               </div>
             </div>
@@ -58,7 +58,7 @@ export function AlertaSeguranca({ tokens }: { tokens: TokenAlerta[] }) {
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-[11px] text-muted-foreground">Só entram aqui tokens com cobertura completa, verificações críticas aprovadas, liquidez mínima para a rede e par com pelo menos {IDADE_MINIMA_HORAS}h de vida. Os limites de liquidez e idade são parâmetros iniciais e serão calibrados com dados reais. A porcentagem é uma pontuação heurística, não uma probabilidade de segurança. Confira antes de decidir — não é recomendação de compra.</p>
+      <p className="mt-3 text-[11px] text-muted-foreground">Só entram aqui tokens com cobertura completa, verificações críticas aprovadas e liquidez mínima para a rede. Os limites de liquidez são parâmetros iniciais e serão calibrados com dados reais. Ainda assim, confira antes de decidir — não é recomendação de compra.</p>
     </section>
   );
 }

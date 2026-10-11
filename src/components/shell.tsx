@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { CarteiraMetaMask } from "@/components/carteira-metamask";
 
 function Relogio() {
   const [hora, setHora] = useState("--:--");
@@ -22,6 +21,7 @@ const navItens = [
   { to: "/desempenho", rotulo: "Top desempenho" },
   { to: "/radar", rotulo: "Radar IA" },
   { to: "/historico", rotulo: "Histórico local" },
+  { to: "/carteira", rotulo: "Carteira" },
 ] as const;
 
 export function Shell({ status, children }: { status: ReactNode; children: ReactNode }) {
@@ -45,10 +45,7 @@ export function Shell({ status, children }: { status: ReactNode; children: React
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-3 text-xs">
-          {status}
-          <CarteiraMetaMask />
-        </div>
+        <div className="ml-auto flex items-center gap-2 text-xs">{status}</div>
       </header>
       <main className="mx-auto max-w-[1400px] px-6 py-8">{children}</main>
       <footer className="flex flex-wrap items-center gap-4 border-t border-border bg-card px-6 py-4 text-[10px] uppercase tracking-widest text-muted-foreground">
