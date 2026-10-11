@@ -8,5 +8,5 @@
 - [x] Parecer da IA no Radar IA (dados reais)
 - [x] Checagem Solana completa no Painel e Lançamentos
 - [x] DEX removida do sistema (página, cálculos, configuração e item do menu)
-- [ ] Criar conexão exclusiva com MetaMask, sem Pix ou transações
+- [x] Criar conexão exclusiva com MetaMask, sem Pix ou transações
 - [ ] Conectar MetaMask no menu, sem DEX, Pix ou transações

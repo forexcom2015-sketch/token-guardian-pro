@@ -21,6 +21,7 @@ const navItens = [
   { to: "/desempenho", rotulo: "Top desempenho" },
   { to: "/radar", rotulo: "Radar IA" },
   { to: "/historico", rotulo: "Histórico local" },
+  { to: "/carteira", rotulo: "Carteira" },
 ] as const;
 
 export function Shell({ status, children }: { status: ReactNode; children: ReactNode }) {

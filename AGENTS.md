@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Embed DexScreener charts directly from each token's market pair address with lazy-loaded iframes; this preserves the provider's live chart without inventing historical price data.
+- Keep wallet integration read-only unless a transaction feature is explicitly requested; MetaMask currently exposes only the selected public account and EVM network.
