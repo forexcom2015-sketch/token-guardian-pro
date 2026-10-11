@@ -41,6 +41,8 @@ function Lancamentos() {
 
       <AlertaSeguranca tokens={q.data?.tokens ?? []} />
 
+      {q.data?.indisponivel && <p className="mb-4 text-sm text-warn">As fontes ao vivo estão temporariamente indisponíveis. A lista tentará novamente em um minuto.</p>}
+
       <section className="panel mb-6 p-4 sm:p-5">
         <h2 className="mb-3 text-sm font-semibold text-card-foreground">Como estes tokens são encontrados?</h2>
         <div className="grid gap-4 text-xs sm:grid-cols-3">

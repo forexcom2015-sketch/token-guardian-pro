@@ -59,7 +59,10 @@ type DexPair = {
 
 async function getJson<T>(url: string): Promise<T | null> {
   try {
-    const r = await fetch(url, { headers: { accept: "application/json" } });
+    const r = await fetch(url, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!r.ok) return null;
     return (await r.json()) as T;
   } catch {
@@ -158,7 +161,7 @@ async function goplusSolanaUm(endereco: string): Promise<Record<string, unknown>
       cacheGoplus.set(k, { em: Date.now(), dado });
       return dado;
     }
-    await espera(800 * (tentativa + 1));
+    if (tentativa < 2) await espera(800 * (tentativa + 1));
   }
   return null;
 }
@@ -416,13 +419,13 @@ async function lancamentosSemCache(redes: Rede[]) {
     [...porRede.entries()].map(async ([rede, lista]) => {
       const ends = lista.map((l) => l.tokenAddress).slice(0, 30);
       const [pares, gp] = await Promise.all([paresDex(rede, ends), goplusLote(rede, ends)]);
-      for (const l of lista) {
+      await Promise.all(lista.map(async (l) => {
         const d = pares.get(l.tokenAddress.toLowerCase());
-        if (!d) continue;
+        if (!d) return;
         const seg = rede === "solana" ? await segurancaSolana(l.tokenAddress, gp) : await segurancaEvm(rede, l.tokenAddress, gp);
         const risco = notaRisco([...(seg?.checagens ?? []), ...checagensMercado(d.par)], !seg);
         resultado.push({ rede, endereco: l.tokenAddress, nome: d.nome, simbolo: d.simbolo, icone: l.icon ?? null, descricao: l.description ?? null, mercado: d.par, risco });
-      }
+      }));
     }),
   );
   return resultado

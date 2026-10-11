@@ -43,6 +43,7 @@ function Painel() {
         </div>
       </div>
       <AlertaSeguranca tokens={tokens} />
+      {q.data?.indisponivel && <p className="mb-4 text-sm text-warn">As fontes ao vivo estão temporariamente indisponíveis. O Painel tentará novamente em um minuto.</p>}
       {q.isError && <p className="text-sm text-danger">Não foi possível carregar agora.</p>}
       {q.isPending && <p className="text-sm text-muted-foreground">Coletando lançamentos e checagens de segurança…</p>}
       <ol className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

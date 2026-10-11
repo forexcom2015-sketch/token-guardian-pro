@@ -147,9 +147,14 @@ export const analisarReal = createServerFn({ method: "POST" })
   });
 
 export const listarLancamentos = createServerFn({ method: "GET" }).handler(async () => {
-  const { lancamentosRecentes } = await import("./onchain.server");
-  const redes: Rede[] = ["solana", "bsc", "ethereum", "base"];
-  return { tokens: await lancamentosRecentes(redes), atualizadoEm: new Date().toISOString() };
+  try {
+    const { lancamentosRecentes } = await import("./onchain.server");
+    const redes: Rede[] = ["solana", "bsc", "ethereum", "base"];
+    return { tokens: await lancamentosRecentes(redes), atualizadoEm: new Date().toISOString(), indisponivel: false };
+  } catch (error) {
+    console.error("[Lançamentos] Falha ao consultar fontes externas.", error instanceof Error ? error.message : error);
+    return { tokens: [], atualizadoEm: new Date().toISOString(), indisponivel: true };
+  }
 });
 
 /** Checklist de segurança sob demanda, sem chamada à IA nem consumo de créditos de IA. */
